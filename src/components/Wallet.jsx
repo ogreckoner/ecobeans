@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Button, Modal, Spin, Tooltip, Typography } from "antd";
 import { KeyOutlined, SettingOutlined } from "@ant-design/icons";
 import { ethers } from "ethers";
@@ -9,50 +9,7 @@ import WalletImport from "./WalletImport";
 
 const { Text } = Typography;
 
-/**
- ~ What it does? ~
-
- Displays a wallet where you can specify address and send USD/ETH, with options to
- scan address, to convert between USD and ETH, to see and generate private keys,
- to send, receive and extract the burner wallet
-
- ~ How can I use? ~
-
- <Wallet
- provider={userProvider}
- address={address}
- ensProvider={mainnetProvider}
- price={price}
- color='red'
- />
-
- ~ Features ~
-
- - Provide provider={userProvider} to display a wallet
- - Provide address={address} if you want to specify address, otherwise
- your default address will be used
- - Provide ensProvider={mainnetProvider} and your address will be replaced by ENS name
- (ex. "0xa870" => "user.eth") or you can enter directly ENS name instead of address
- - Provide price={price} of ether and easily convert between USD and ETH
- - Provide color to specify the color of wallet icon
- **/
-
-export default function Wallet({ signer, address, padding, color, ensProvider, provider, size }) {
-  const [signerAddress, setSignerAddress] = useState();
-
-  useEffect(() => {
-    async function getAddress() {
-      if (signer) {
-        const newAddress = await signer.getAddress();
-        setSignerAddress(newAddress);
-      }
-    }
-
-    getAddress();
-  }, [signer]);
-
-  const selectedAddress = address || signerAddress;
-
+export default function Wallet({ address, padding, color, provider, size }) {
   const [open, setOpen] = useState();
   const [qr, setQr] = useState();
   const [pk, setPK] = useState();
@@ -62,15 +19,13 @@ export default function Wallet({ signer, address, padding, color, ensProvider, p
   const providerSend = provider ? (
     <Tooltip title="Wallet">
       <SettingOutlined
-        onClick={() => {
-          setOpen(!open);
-        }}
+        onClick={() => setOpen(!open)}
         style={{
-          padding: padding ? padding : 7,
-          color: color ? color : "",
           cursor: "pointer",
-          fontSize: size ? size : 28,
           verticalAlign: "middle",
+          color: color ? color : "",
+          fontSize: size ? size : 28,
+          padding: padding ? padding : 7,
         }}
       />
     </Tooltip>
@@ -95,23 +50,16 @@ export default function Wallet({ signer, address, padding, color, ensProvider, p
     display = (
       <div>
         <div>
-          <Text copyable>{selectedAddress}</Text>
+          <Text copyable>{address}</Text>
         </div>
-        <QR
-          value={selectedAddress}
-          size="450"
-          level="H"
-          includeMargin
-          renderAs="svg"
-          imageSettings={{ excavate: false }}
-        />
+        <QR value={address} size="450" level="H" includeMargin renderAs="svg" imageSettings={{ excavate: false }} />
       </div>
     );
     privateKeyButton = (
       <Button
         key="hide"
         onClick={() => {
-          setPK(selectedAddress);
+          setPK(address);
           setQr("");
         }}
       >
@@ -122,7 +70,7 @@ export default function Wallet({ signer, address, padding, color, ensProvider, p
     const pk = localStorage.getItem("metaPrivateKey");
     const wallet = new ethers.Wallet(pk);
 
-    if (wallet.address !== selectedAddress) {
+    if (wallet.address !== address) {
       display = (
         <div>
           <b>*injected account*, private key unknown</b>
@@ -135,7 +83,7 @@ export default function Wallet({ signer, address, padding, color, ensProvider, p
       extraPkDisplay.push(
         <div style={{ fontSize: 16, padding: 2, backgroundStyle: "#89e789" }}>
           <a href={"/pk#" + pk}>
-            <Address minimized address={wallet.address} ensProvider={ensProvider} /> {wallet.address.substr(0, 6)}
+            <Address minimized address={wallet.address} provider={provider} /> {wallet.address.substr(0, 6)}
           </a>
         </div>,
       );
@@ -148,7 +96,7 @@ export default function Wallet({ signer, address, padding, color, ensProvider, p
             extraPkDisplay.push(
               <div style={{ fontSize: 16 }}>
                 <a href={"/pk#" + pastpk}>
-                  <Address minimized address={pastwallet.address} ensProvider={ensProvider} />{" "}
+                  <Address minimized address={pastwallet.address} provider={provider} />{" "}
                   {pastwallet.address.substr(0, 6)}
                 </a>
               </div>,
@@ -170,7 +118,7 @@ export default function Wallet({ signer, address, padding, color, ensProvider, p
 
             <form id="pk">
               <span style={{ display: "none" }}>
-                <input type="text" name="username" value={"Eco Wallet - " + selectedAddress} />
+                <input type="text" name="username" value={"Eco Wallet - " + address} />
                 <input type="password" name="password" value={pk} />
               </span>
               <button id="submitPk" type="submit" value="Save Access" action="#">
@@ -200,7 +148,7 @@ export default function Wallet({ signer, address, padding, color, ensProvider, p
       <Button
         key="hide"
         onClick={() => {
-          setPK(selectedAddress);
+          setPK(address);
           setQr("");
         }}
       >
@@ -214,9 +162,7 @@ export default function Wallet({ signer, address, padding, color, ensProvider, p
       {providerSend}
       <Modal
         visible={open}
-        title={
-          <div>{selectedAddress ? <Address address={selectedAddress} ensProvider={ensProvider} /> : <Spin />}</div>
-        }
+        title={<div>{address ? <Address address={address} provider={provider} /> : <Spin />}</div>}
         onOk={() => {
           setPK();
           setOpen(!open);

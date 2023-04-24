@@ -12,8 +12,7 @@ import { NETWORKS } from "./constants";
 import { Web3ModalSetup } from "./helpers";
 
 import "antd/dist/antd.css";
-
-/// 📡 What chain are your contracts deployed to?
+import { Footer } from "./components/Footer";
 
 const web3Modal = Web3ModalSetup();
 
@@ -22,20 +21,19 @@ const selectedNetwork = initialNetwork.name;
 const targetNetwork = NETWORKS[selectedNetwork];
 const RPC_URL = process.env.REACT_APP_PROVIDER ? process.env.REACT_APP_PROVIDER : targetNetwork.rpcUrl;
 
+async function logoutOfWeb3Modal(injectedProvider) {
+  await web3Modal.clearCachedProvider();
+  if (injectedProvider && injectedProvider.provider && typeof injectedProvider.provider.disconnect == "function") {
+    await injectedProvider.provider.disconnect();
+  }
+  setTimeout(() => window.location.reload(), 1);
+}
+
 function App() {
   const [address, setAddress] = useState();
-  const [showSettings, setShowSettings] = useState(false);
   const [injectedProvider, setInjectedProvider] = useState();
 
   const localProvider = useStaticJsonRPC([RPC_URL]);
-
-  const logoutOfWeb3Modal = useCallback(async () => {
-    await web3Modal.clearCachedProvider();
-    if (injectedProvider && injectedProvider.provider && typeof injectedProvider.provider.disconnect == "function") {
-      await injectedProvider.provider.disconnect();
-    }
-    setTimeout(() => window.location.reload(), 1);
-  }, [injectedProvider]);
 
   const { signer: userSigner } = useUserProviderAndSigner(injectedProvider, localProvider, true);
 
@@ -46,7 +44,6 @@ function App() {
         setAddress(newAddress);
       }
     }
-
     getAddress();
   }, [userSigner]);
 
@@ -67,47 +64,22 @@ function App() {
 
     // Subscribe to session disconnection
     provider.on("disconnect", (code, reason) => {
-      console.log(code, reason);
-      logoutOfWeb3Modal();
+      console.log("disconnect", code, reason);
+      logoutOfWeb3Modal(injectedProvider);
     });
-  }, [logoutOfWeb3Modal]);
+  }, [injectedProvider]);
 
   useEffect(() => {
-    if (web3Modal.cachedProvider) {
-      loadWeb3Modal();
-    }
+    if (web3Modal.cachedProvider) loadWeb3Modal();
+
     //automatically connect if it is a safe app
-    const checkSafeApp = async () => {
-      if (await web3Modal.isSafeApp()) {
-        loadWeb3Modal();
-      }
-    };
-    checkSafeApp();
+    web3Modal.isSafeApp().then(isSafeApp => isSafeApp && loadWeb3Modal());
   }, [loadWeb3Modal]);
 
   return (
     <div className="App">
       <Header>
-        <div
-          style={{
-            position: "relative",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <div style={{ display: "flex", flex: 1 }}>
-            <Account address={address} userSigner={userSigner} localProvider={localProvider} />
-            <div
-              onClick={() => setShowSettings(!showSettings)}
-              style={{
-                cursor: "pointer",
-                fontSize: 18,
-                paddingTop: 4,
-                paddingLeft: 8,
-              }}
-            />
-          </div>
-        </div>
+        <Account address={address} userSigner={userSigner} localProvider={localProvider} />
       </Header>
       <Switch>
         <Route exact path="/">
@@ -117,14 +89,7 @@ function App() {
           <Home address={address} userSigner={userSigner} localProvider={localProvider} network={targetNetwork} />
         </Route>
       </Switch>
-
-      <div style={{ zIndex: -1, padding: 64, opacity: 0.5, fontSize: 12 }}>
-        created by <a href="https://eco.org">eco</a> with{" "}
-        <a href="https://github.com/austintgriffith/scaffold-eth#-scaffold-eth" target="_blank" rel="noreferrer">
-          scaffold-eth
-        </a>
-      </div>
-      <div style={{ padding: 32 }} />
+      <Footer />
     </div>
   );
 }

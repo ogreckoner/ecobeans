@@ -13,14 +13,14 @@ const { Text } = Typography;
 
  <Address
  address={address}
- ensProvider={mainnetProvider}
+ provider={mainnetProvider}
  blockExplorer={blockExplorer}
  fontSize={fontSize}
  />
 
  ~ Features ~
 
- - Provide ensProvider={mainnetProvider} and your address will be replaced by ENS name
+ - Provide provider={mainnetProvider} and your address will be replaced by ENS name
  (ex. "0xa870" => "user.eth")
  - Provide blockExplorer={blockExplorer}, click on address and get the link
  (ex. by default "https://etherscan.io/" or for xdai "https://blockscout.com/poa/xdai/")
@@ -31,7 +31,7 @@ const blockExplorerLink = (address, blockExplorer) => `${blockExplorer || "https
 
 export default function Address(props) {
   const address = props.value || props.address;
-  const ens = useLookupAddress(props.ensProvider, address);
+  const ens = useLookupAddress(props.provider, address);
   const ensSplit = ens && ens.split(".");
   const validEnsCheck = ensSplit && ensSplit[ensSplit.length - 1] === "eth";
   const etherscanLink = blockExplorerLink(address, props.blockExplorer);
