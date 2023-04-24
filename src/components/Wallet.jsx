@@ -105,6 +105,16 @@ export default function Wallet({ address, padding, color, provider, size }) {
         }
       }
 
+      const useForm = !window.PasswordCredential;
+      const saveCredentials = async () => {
+        const cred = new window.PasswordCredential({
+          id: "Eco Wallet - " + address,
+          name: "Eco Wallet - " + address,
+          password: pk,
+        });
+        await navigator.credentials.store(cred);
+      };
+
       display = (
         <div>
           <div>
@@ -116,15 +126,21 @@ export default function Wallet({ address, padding, color, provider, size }) {
             </div>
             <br />
 
-            <form id="pk">
-              <span style={{ display: "none" }}>
-                <input type="text" name="username" value={"Eco Wallet - " + address} />
-                <input type="password" name="password" value={pk} />
-              </span>
-              <button id="submitPk" type="submit" value="Save Access" action="#">
+            {useForm ? (
+              <form id="pk">
+                <span style={{ display: "none" }}>
+                  <input type="text" name="username" value={"Eco Wallet - " + address} />
+                  <input type="password" name="password" value={pk} />
+                </span>
+                <button id="submitPk" type="submit" value="Save Access" action="#">
+                  Save Access
+                </button>
+              </form>
+            ) : (
+              <button type="submit" value="Save Access" onClick={saveCredentials}>
                 Save Access
               </button>
-            </form>
+            )}
 
             <br />
           </div>
