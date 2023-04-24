@@ -1,9 +1,9 @@
-import { CaretUpOutlined, ScanOutlined, SendOutlined } from "@ant-design/icons";
-import { useContractReader } from "eth-hooks";
-import { ethers } from "ethers";
 import React, { useEffect, useMemo, useState } from "react";
-import { useHistory, useParams } from "react-router-dom";
 import { Button, Input } from "antd";
+import { CaretUpOutlined, ScanOutlined, SendOutlined } from "@ant-design/icons";
+import { ethers } from "ethers";
+import { useContractReader } from "eth-hooks";
+import { useHistory, useParams } from "react-router-dom";
 
 import AddressInput from "../components/AddressInput";
 import QRPunkBlockie from "../components/QRPunkBlockie";
@@ -17,16 +17,7 @@ function round(number, decimals) {
   return Math.round((number + Number.EPSILON) * d) / d;
 }
 
-const explorer = process.env.REACT_APP_NETWORK === "goerli" ? "https://goerli.etherscan.io" : "https://etherscan.io";
-
-/*
-/**
- * web3 props can be passed from '../App.jsx' into your local view component for use
- * @param {*} yourLocalBalance balance on current network
- * @param {*} readContracts contracts from current chain already pre-loaded using ethers contract module. More here https://docs.ethers.io/v5/api/contract/contract/
- * @returns react component
- **/
-function Home({ userSigner, address, mainnetProvider, selectedChainId, tx, writeContracts }) {
+function Home({ network, userSigner, address, localProvider }) {
   let history = useHistory();
 
   const readContracts = useMemo(
@@ -125,7 +116,7 @@ function Home({ userSigner, address, mainnetProvider, selectedChainId, tx, write
         }}
       >
         <QRPunkBlockie withQr={true} address={address} />
-        {/*<Address address={address} ensProvider={mainnetProvider} hideBlockie={true} fontSize={18} />*/}
+        {/*<Address address={address} ensProvider={localProvider} hideBlockie={true} fontSize={18} />*/}
       </div>
 
       <div style={{ margin: "auto", marginTop: 32, width: 300 }}>
@@ -133,7 +124,7 @@ function Home({ userSigner, address, mainnetProvider, selectedChainId, tx, write
           placeholder="to address"
           value={toAddress}
           onChange={setToAddress}
-          ensProvider={mainnetProvider}
+          ensProvider={localProvider}
           hoistScanner={toggle => (scanner = toggle)}
         />
       </div>
@@ -198,7 +189,7 @@ function Home({ userSigner, address, mainnetProvider, selectedChainId, tx, write
         {gasless.lastTx ? (
           <span style={{ color: "rgb(0,200,0)" }}>
             Gasless transfer executed -{" "}
-            <a target="_blank" rel="noreferrer" href={`${explorer}/tx/${gasless.lastTx.transaction.hash}`}>
+            <a target="_blank" rel="noreferrer" href={`${network.blockExplorer}/tx/${gasless.lastTx.transaction.hash}`}>
               transaction
             </a>
           </span>

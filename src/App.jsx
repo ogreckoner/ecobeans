@@ -1,85 +1,43 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Col, Row } from "antd";
 import { Route, Switch } from "react-router-dom";
 import { ethers } from "ethers";
-import { useExchangeEthPrice } from "eth-hooks/dapps/dex";
-import { useBalance, useContractLoader, useContractReader, useUserProviderAndSigner } from "eth-hooks";
+import { useUserProviderAndSigner } from "eth-hooks";
 
 import "./App.css";
 
 import { Home } from "./views";
-import { ALCHEMY_KEY, NETWORKS } from "./constants";
-import { useGasPrice, useStaticJsonRPC } from "./hooks";
-import { getRPCPollTime, Transactor, Web3ModalSetup } from "./helpers";
-import { Account, Contract, Faucet, FaucetHint, Header, NetworkSwitch } from "./components";
+import { useStaticJsonRPC } from "./hooks";
+import { Account, Header } from "./components";
+import { NETWORKS } from "./constants";
+import { Web3ModalSetup } from "./helpers";
 
 import "antd/dist/antd.css";
 
 /// 📡 What chain are your contracts deployed to?
-const initialNetwork = NETWORKS[process.env.REACT_APP_NETWORK ?? "buidlguidl"]; // <------- select your target frontend network (localhost, goerli, xdai, mainnet)
-
-// 😬 Sorry for all the console logging
-const DEBUG = true;
-const USE_BURNER_WALLET = true; // toggle burner wallet feature
-const USE_NETWORK_SELECTOR = false;
 
 const web3Modal = Web3ModalSetup();
 
-// 🛰 providers
-const providers = [
-  "https://eth-mainnet.gateway.pokt.network/v1/lb/611156b4a585a20035148406",
-  `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-  "https://rpc.scaffoldeth.io:48544",
-];
+const initialNetwork = NETWORKS[process.env.REACT_APP_NETWORK ?? "goerli"];
+const selectedNetwork = initialNetwork.name;
+const targetNetwork = NETWORKS[selectedNetwork];
+const RPC_URL = process.env.REACT_APP_PROVIDER ? process.env.REACT_APP_PROVIDER : targetNetwork.rpcUrl;
 
 function App() {
-  // specify all the chains your app is available on. Eg: ['localhost', 'mainnet', ...otherNetworks ]
-  // reference './constants.js' for other networks
-  const networkOptions = [initialNetwork.name, "mainnet", "goerli"];
-
-  const [injectedProvider, setInjectedProvider] = useState();
   const [address, setAddress] = useState();
-  const [selectedNetwork, setSelectedNetwork] = useState(networkOptions[0]);
+  const [showSettings, setShowSettings] = useState(false);
+  const [injectedProvider, setInjectedProvider] = useState();
 
-  const targetNetwork = NETWORKS[selectedNetwork];
+  const localProvider = useStaticJsonRPC([RPC_URL]);
 
-  // 🔭 block explorer URL
-  const blockExplorer = targetNetwork.blockExplorer;
-
-  // load all your providers
-  const localProvider = useStaticJsonRPC([
-    process.env.REACT_APP_PROVIDER ? process.env.REACT_APP_PROVIDER : targetNetwork.rpcUrl,
-  ]);
-
-  const mainnetProvider = useStaticJsonRPC(providers, localProvider);
-
-  // Sensible pollTimes depending on the provider you are using
-  const localProviderPollingTime = getRPCPollTime(localProvider);
-  const mainnetProviderPollingTime = getRPCPollTime(mainnetProvider);
-
-  if (DEBUG) console.log(`Using ${selectedNetwork} network`);
-
-  // 🛰 providers
-  if (DEBUG) console.log("📡 Connecting to Mainnet Ethereum");
-
-  const logoutOfWeb3Modal = async () => {
+  const logoutOfWeb3Modal = useCallback(async () => {
     await web3Modal.clearCachedProvider();
     if (injectedProvider && injectedProvider.provider && typeof injectedProvider.provider.disconnect == "function") {
       await injectedProvider.provider.disconnect();
     }
-    setTimeout(() => {
-      window.location.reload();
-    }, 1);
-  };
+    setTimeout(() => window.location.reload(), 1);
+  }, [injectedProvider]);
 
-  /* 💵 This hook will get the price of ETH from 🦄 Uniswap: */
-  const price = useExchangeEthPrice(targetNetwork, mainnetProvider, mainnetProviderPollingTime);
-
-  /* 🔥 This hook will get the price of Gas from ⛽️ EtherGasStation */
-  const gasPrice = useGasPrice(targetNetwork, "FastGasPrice", localProviderPollingTime);
-  // Use your injected provider from 🦊 Metamask or if you don't have it then instantly generate a 🔥 burner wallet.
-  const userProviderAndSigner = useUserProviderAndSigner(injectedProvider, localProvider, USE_BURNER_WALLET);
-  const userSigner = userProviderAndSigner.signer;
+  const { signer: userSigner } = useUserProviderAndSigner(injectedProvider, localProvider, true);
 
   useEffect(() => {
     async function getAddress() {
@@ -91,99 +49,6 @@ function App() {
 
     getAddress();
   }, [userSigner]);
-
-  // You can warn the user if you would like them to be on a specific network
-  const localChainId = localProvider && localProvider._network && localProvider._network.chainId;
-  const selectedChainId =
-    userSigner && userSigner.provider && userSigner.provider._network && userSigner.provider._network.chainId;
-
-  // For more hooks, check out 🔗eth-hooks at: https://www.npmjs.com/package/eth-hooks
-
-  // The transactor wraps transactions and provides notificiations
-  const tx = Transactor(userSigner, gasPrice);
-
-  // 🏗 scaffold-eth is full of handy hooks like this one to get your balance:
-  const yourLocalBalance = useBalance(localProvider, address, localProviderPollingTime);
-
-  // Just plug in different 🛰 providers to get your balance on different chains:
-  const yourMainnetBalance = useBalance(mainnetProvider, address, mainnetProviderPollingTime);
-
-  // const contractConfig = useContractConfig();
-
-  const contractConfig = {
-    deployedContracts: {},
-    externalContracts: {},
-  };
-
-  // Load in your local 📝 contract and read a value from it:
-  const readContracts = useContractLoader(localProvider, contractConfig);
-
-  // If you want to make 🔐 write transactions to your contracts, use the userSigner:
-  const writeContracts = useContractLoader(userSigner, contractConfig, localChainId);
-
-  // EXTERNAL CONTRACT EXAMPLE:
-  //
-  // If you want to bring in the mainnet DAI contract it would look like:
-  const mainnetContracts = useContractLoader(mainnetProvider, contractConfig);
-
-  // If you want to call a function on a new block
-  // useOnBlock(mainnetProvider, () => {
-  //   console.log(`⛓ A new mainnet block is here: ${mainnetProvider._lastBlockNumber}`);
-  // });
-
-  // Then read your DAI balance like:
-  const myMainnetDAIBalance = useContractReader(
-    mainnetContracts,
-    "DAI",
-    "balanceOf",
-    ["0x34aA3F359A9D614239015126635CE7732c18fDF3"],
-    mainnetProviderPollingTime,
-  );
-
-  /*
-      const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
-      console.log("🏷 Resolved austingriffith.eth as:", addressFromENS)
-      */
-
-  //
-  // 🧫 DEBUG 👨🏻‍🔬
-  //
-  useEffect(() => {
-    if (
-      DEBUG &&
-      mainnetProvider &&
-      address &&
-      selectedChainId &&
-      yourLocalBalance &&
-      yourMainnetBalance &&
-      readContracts &&
-      writeContracts &&
-      mainnetContracts
-    ) {
-      console.log("_____________________________________ 🏗 scaffold-eth _____________________________________");
-      console.log("🌎 mainnetProvider", mainnetProvider);
-      console.log("🏠 localChainId", localChainId);
-      console.log("👩‍💼 selected address:", address);
-      console.log("🕵🏻‍♂️ selectedChainId:", selectedChainId);
-      console.log("💵 yourLocalBalance", yourLocalBalance ? ethers.utils.formatEther(yourLocalBalance) : "...");
-      console.log("💵 yourMainnetBalance", yourMainnetBalance ? ethers.utils.formatEther(yourMainnetBalance) : "...");
-      console.log("📝 readContracts", readContracts);
-      console.log("🌍 DAI contract on mainnet:", mainnetContracts);
-      console.log("💵 yourMainnetDAIBalance", myMainnetDAIBalance);
-      console.log("🔐 writeContracts", writeContracts);
-    }
-  }, [
-    mainnetProvider,
-    address,
-    selectedChainId,
-    yourLocalBalance,
-    yourMainnetBalance,
-    readContracts,
-    writeContracts,
-    mainnetContracts,
-    localChainId,
-    myMainnetDAIBalance,
-  ]);
 
   const loadWeb3Modal = useCallback(async () => {
     //const provider = await web3Modal.connect();
@@ -205,8 +70,7 @@ function App() {
       console.log(code, reason);
       logoutOfWeb3Modal();
     });
-    // eslint-disable-next-line
-  }, [setInjectedProvider]);
+  }, [logoutOfWeb3Modal]);
 
   useEffect(() => {
     if (web3Modal.cachedProvider) {
@@ -221,15 +85,9 @@ function App() {
     checkSafeApp();
   }, [loadWeb3Modal]);
 
-  const [showSettings, setShowSettings] = useState(false);
-
-  const faucetAvailable = localProvider && localProvider.connection && targetNetwork.name.indexOf("local") !== -1;
-
   return (
     <div className="App">
-      {/* ✏️ Edit the header and change the title to your project name */}
       <Header>
-        {/* 👨‍💼 Your account is in the top right with a wallet at connect options */}
         <div
           style={{
             position: "relative",
@@ -238,28 +96,7 @@ function App() {
           }}
         >
           <div style={{ display: "flex", flex: 1 }}>
-            {USE_NETWORK_SELECTOR && (
-              <div style={{ marginRight: 20 }}>
-                <NetworkSwitch
-                  networkOptions={networkOptions}
-                  selectedNetwork={selectedNetwork}
-                  setSelectedNetwork={setSelectedNetwork}
-                />
-              </div>
-            )}
-
-            <Account
-              useBurner={USE_BURNER_WALLET}
-              address={address}
-              localProvider={localProvider}
-              userSigner={userSigner}
-              mainnetProvider={mainnetProvider}
-              price={price}
-              web3Modal={web3Modal}
-              loadWeb3Modal={loadWeb3Modal}
-              logoutOfWeb3Modal={logoutOfWeb3Modal}
-              blockExplorer={blockExplorer}
-            />
+            <Account address={address} userSigner={userSigner} localProvider={localProvider} />
             <div
               onClick={() => setShowSettings(!showSettings)}
               style={{
@@ -272,89 +109,15 @@ function App() {
           </div>
         </div>
       </Header>
-      {yourLocalBalance.lte(ethers.BigNumber.from("0")) && (
-        <FaucetHint localProvider={localProvider} targetNetwork={targetNetwork} address={address} />
-      )}
-
       <Switch>
         <Route exact path="/">
-          {/* pass in any web3 props to this Home component. For example, yourLocalBalance */}
-          <Home
-            tx={tx}
-            localProvider={localProvider}
-            selectedChainId={selectedChainId}
-            yourLocalBalance={yourLocalBalance}
-            readContracts={readContracts}
-            writeContracts={writeContracts}
-            mainnetContracts={mainnetContracts}
-            mainnetProvider={mainnetProvider}
-            address={address}
-            userSigner={userSigner}
-            price={price}
-            blockExplorer={blockExplorer}
-            contractConfig={contractConfig}
-          />
+          <Home address={address} userSigner={userSigner} localProvider={localProvider} network={targetNetwork} />
         </Route>
         <Route exact path="/:address">
-          {/* pass in any web3 props to this Home component. For example, yourLocalBalance */}
-          <Home
-            tx={tx}
-            localProvider={localProvider}
-            selectedChainId={selectedChainId}
-            yourLocalBalance={yourLocalBalance}
-            readContracts={readContracts}
-            writeContracts={writeContracts}
-            mainnetContracts={mainnetContracts}
-            mainnetProvider={mainnetProvider}
-            address={address}
-            userSigner={userSigner}
-            price={price}
-            blockExplorer={blockExplorer}
-            contractConfig={contractConfig}
-          />
-        </Route>
-        <Route exact path="/debug">
-          {/*
-                🎛 this scaffolding is full of commonly used components
-                this <Contract/> component will automatically parse your ABI
-                and give you a form to interact with it locally
-            */}
-
-          <Contract
-            name="BuidlGuidlBeans"
-            price={price}
-            signer={userSigner}
-            provider={localProvider}
-            address={address}
-            blockExplorer={blockExplorer}
-            contractConfig={contractConfig}
-          />
+          <Home address={address} userSigner={userSigner} localProvider={localProvider} network={targetNetwork} />
         </Route>
       </Switch>
 
-      {/* 🗺 Extra UI like gas price, eth price, faucet, and support: */}
-      <div
-        style={{
-          position: "fixed",
-          textAlign: "left",
-          left: 0,
-          bottom: 20,
-          padding: 10,
-        }}
-      >
-        <Row align="middle" gutter={[4, 4]}>
-          <Col span={24}>
-            {
-              /*  if the local provider has a signer, let's show the faucet:  */
-              faucetAvailable ? (
-                <Faucet localProvider={localProvider} price={price} ensProvider={mainnetProvider} />
-              ) : (
-                ""
-              )
-            }
-          </Col>
-        </Row>
-      </div>
       <div style={{ zIndex: -1, padding: 64, opacity: 0.5, fontSize: 12 }}>
         created by <a href="https://eco.org">eco</a> with{" "}
         <a href="https://github.com/austintgriffith/scaffold-eth#-scaffold-eth" target="_blank" rel="noreferrer">

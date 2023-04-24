@@ -1,12 +1,11 @@
 import { ethers } from "ethers";
 import React, { useEffect, useState } from "react";
-
 import { Button, Input } from "antd";
 
 export default function WalletImport({ setShowImport }) {
   const [importMnemonic, setImportMnemonic] = useState();
-  const [importMnemonicIndex, setImportMnemonicIndex] = useState("0");
   const [password, setPassword] = useState("");
+  const [importMnemonicIndex, setImportMnemonicIndex] = useState("0");
   const [importPrivatekey, setImportPrivatekey] = useState();
   const [importAddress, setImportAddress] = useState();
 

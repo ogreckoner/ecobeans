@@ -37,20 +37,21 @@ const { Text } = Typography;
  - Provide color to specify the color of wallet icon
  **/
 
-export default function Wallet(props) {
+export default function Wallet({ signer, address, padding, color, ensProvider, provider, size }) {
   const [signerAddress, setSignerAddress] = useState();
+
   useEffect(() => {
     async function getAddress() {
-      if (props.signer) {
-        const newAddress = await props.signer.getAddress();
+      if (signer) {
+        const newAddress = await signer.getAddress();
         setSignerAddress(newAddress);
       }
     }
 
     getAddress();
-  }, [props.signer]);
+  }, [signer]);
 
-  const selectedAddress = props.address || signerAddress;
+  const selectedAddress = address || signerAddress;
 
   const [open, setOpen] = useState();
   const [qr, setQr] = useState();
@@ -58,17 +59,17 @@ export default function Wallet(props) {
 
   const [showImport, setShowImport] = useState();
 
-  const providerSend = props.provider ? (
+  const providerSend = provider ? (
     <Tooltip title="Wallet">
       <SettingOutlined
         onClick={() => {
           setOpen(!open);
         }}
         style={{
-          padding: props.padding ? props.padding : 7,
-          color: props.color ? props.color : "",
+          padding: padding ? padding : 7,
+          color: color ? color : "",
           cursor: "pointer",
-          fontSize: props.size ? props.size : 28,
+          fontSize: size ? size : 28,
           verticalAlign: "middle",
         }}
       />
@@ -134,7 +135,7 @@ export default function Wallet(props) {
       extraPkDisplay.push(
         <div style={{ fontSize: 16, padding: 2, backgroundStyle: "#89e789" }}>
           <a href={"/pk#" + pk}>
-            <Address minimized address={wallet.address} ensProvider={props.ensProvider} /> {wallet.address.substr(0, 6)}
+            <Address minimized address={wallet.address} ensProvider={ensProvider} /> {wallet.address.substr(0, 6)}
           </a>
         </div>,
       );
@@ -147,7 +148,7 @@ export default function Wallet(props) {
             extraPkDisplay.push(
               <div style={{ fontSize: 16 }}>
                 <a href={"/pk#" + pastpk}>
-                  <Address minimized address={pastwallet.address} ensProvider={props.ensProvider} />{" "}
+                  <Address minimized address={pastwallet.address} ensProvider={ensProvider} />{" "}
                   {pastwallet.address.substr(0, 6)}
                 </a>
               </div>,
@@ -214,9 +215,7 @@ export default function Wallet(props) {
       <Modal
         visible={open}
         title={
-          <div>
-            {selectedAddress ? <Address address={selectedAddress} ensProvider={props.ensProvider} /> : <Spin />}
-          </div>
+          <div>{selectedAddress ? <Address address={selectedAddress} ensProvider={ensProvider} /> : <Spin />}</div>
         }
         onOk={() => {
           setPK();
