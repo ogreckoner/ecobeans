@@ -55,7 +55,7 @@ function Home({ userSigner, address, mainnetProvider, selectedChainId, tx, write
       setToAddress(params.address);
       history.push("/");
     }
-  }, [params.address]);
+  }, [history, params.address]);
 
   const doSend = async () => {
     setLoading(true);
@@ -115,7 +115,15 @@ function Home({ userSigner, address, mainnetProvider, selectedChainId, tx, write
         {balance ? round(parseFloat(ethers.utils.formatEther(balance)), 4).toFixed(4) : "---"}
       </div>
 
-      <div style={{ margin: "auto", position: "relative", backgroundColor: "#ffffff", padding: 8, width: 400 }}>
+      <div
+        style={{
+          margin: "auto",
+          position: "relative",
+          backgroundColor: "#ffffff",
+          padding: 8,
+          width: 400,
+        }}
+      >
         <QRPunkBlockie withQr={true} address={address} />
         {/*<Address address={address} ensProvider={mainnetProvider} hideBlockie={true} fontSize={18} />*/}
       </div>
@@ -138,7 +146,11 @@ function Home({ userSigner, address, mainnetProvider, selectedChainId, tx, write
           prefix="ⓔ"
           placeholder="amount to send"
           value={amount}
-          style={{ fontSize: 20, width: 300, fontFamily: "'Rubik', sans-serif" }}
+          style={{
+            fontSize: 20,
+            width: 300,
+            fontFamily: "'Rubik', sans-serif",
+          }}
           onChange={e => setAmount(e.target.value)}
           onKeyPress={handleKey}
         />
@@ -160,10 +172,21 @@ function Home({ userSigner, address, mainnetProvider, selectedChainId, tx, write
           disabled={disabled}
           loading={loading}
           onClick={doSend}
-          style={{ marginTop: 8, ...(disabled ? {} : { color: "white", backgroundColor: "#06153c" }) }}
+          style={{
+            marginTop: 8,
+            ...(disabled ? {} : { color: "white", backgroundColor: "#06153c" }),
+          }}
         >
           {loading || !amount || !toAddress ? <CaretUpOutlined /> : <SendOutlined style={{ color: "#FFFFFF" }} />}
-          <span style={{ "font-family": "romana", "padding-left": 20, "padding-right": 20 }}>Send</span>
+          <span
+            style={{
+              "font-family": "romana",
+              "padding-left": 20,
+              "padding-right": 20,
+            }}
+          >
+            Send
+          </span>
         </Button>
 
         {gasless.enabling ? (

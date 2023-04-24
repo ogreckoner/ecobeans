@@ -1,57 +1,25 @@
+import React, { useCallback, useEffect, useState } from "react";
 import { Col, Row } from "antd";
+import { Route, Switch } from "react-router-dom";
+import { ethers } from "ethers";
+import { useExchangeEthPrice } from "eth-hooks/dapps/dex";
+import { useBalance, useContractLoader, useContractReader, useUserProviderAndSigner } from "eth-hooks";
 
-import { CloseOutlined, UserSwitchOutlined } from "@ant-design/icons";
+import "./App.css";
+
+import { Home } from "./views";
+import { ALCHEMY_KEY, NETWORKS } from "./constants";
+import { useGasPrice, useStaticJsonRPC } from "./hooks";
+import { getRPCPollTime, Transactor, Web3ModalSetup } from "./helpers";
+import { Account, Contract, Faucet, FaucetHint, Header, NetworkSwitch } from "./components";
 
 import "antd/dist/antd.css";
-import { useBalance, useContractLoader, useContractReader, useUserProviderAndSigner } from "eth-hooks";
-import { useExchangeEthPrice } from "eth-hooks/dapps/dex";
-import React, { useCallback, useEffect, useState } from "react";
-import { Route, Switch, useLocation } from "react-router-dom";
-import "./App.css";
-import {
-  Account,
-  Contract,
-  Faucet,
-  FaucetHint,
-  Header,
-  NetworkDisplay,
-  NetworkSwitch,
-  ThemeSwitch,
-} from "./components";
-import { ALCHEMY_KEY, NETWORKS } from "./constants";
-import externalContracts from "./contracts/external_contracts";
-// contracts
-// import deployedContracts from "./contracts/hardhat_contracts.json";
-import { getRPCPollTime, Transactor, Web3ModalSetup } from "./helpers";
-import { Home } from "./views";
-import { useGasPrice, useStaticJsonRPC } from "./hooks";
-
-const { ethers } = require("ethers");
-/*
-    Welcome to 🏗 scaffold-eth !
-
-    Code:
-    https://github.com/scaffold-eth/scaffold-eth
-
-    Support:
-    https://t.me/joinchat/KByvmRe5wkR-8F_zz6AjpA
-    or DM @austingriffith on twitter or telegram
-
-    You should get your own Alchemy.com & Infura.io ID and put it in `constants.js`
-    (this is your connection to the main Ethereum network for ENS etc.)
-
-
-    🌏 EXTERNAL CONTRACTS:
-    You can also bring in contract artifacts in `constants.js`
-    (and then use the `useExternalContractLoader()` hook!)
-*/
 
 /// 📡 What chain are your contracts deployed to?
 const initialNetwork = NETWORKS[process.env.REACT_APP_NETWORK ?? "buidlguidl"]; // <------- select your target frontend network (localhost, goerli, xdai, mainnet)
 
 // 😬 Sorry for all the console logging
 const DEBUG = true;
-const NETWORKCHECK = true;
 const USE_BURNER_WALLET = true; // toggle burner wallet feature
 const USE_NETWORK_SELECTOR = false;
 
@@ -64,7 +32,7 @@ const providers = [
   "https://rpc.scaffoldeth.io:48544",
 ];
 
-function App(props) {
+function App() {
   // specify all the chains your app is available on. Eg: ['localhost', 'mainnet', ...otherNetworks ]
   // reference './constants.js' for other networks
   const networkOptions = [initialNetwork.name, "mainnet", "goerli"];
@@ -72,7 +40,6 @@ function App(props) {
   const [injectedProvider, setInjectedProvider] = useState();
   const [address, setAddress] = useState();
   const [selectedNetwork, setSelectedNetwork] = useState(networkOptions[0]);
-  const location = useLocation();
 
   const targetNetwork = NETWORKS[selectedNetwork];
 
@@ -143,7 +110,10 @@ function App(props) {
 
   // const contractConfig = useContractConfig();
 
-  const contractConfig = { deployedContracts: {}, externalContracts: externalContracts || {} };
+  const contractConfig = {
+    deployedContracts: {},
+    externalContracts: {},
+  };
 
   // Load in your local 📝 contract and read a value from it:
   const readContracts = useContractLoader(localProvider, contractConfig);
@@ -170,13 +140,10 @@ function App(props) {
     mainnetProviderPollingTime,
   );
 
-  // keep track of a variable from the contract in the local React state:
-  const purpose = useContractReader(readContracts, "YourContract", "purpose", [], localProviderPollingTime);
-
   /*
-  const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
-  console.log("🏷 Resolved austingriffith.eth as:", addressFromENS)
-  */
+      const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
+      console.log("🏷 Resolved austingriffith.eth as:", addressFromENS)
+      */
 
   //
   // 🧫 DEBUG 👨🏻‍🔬
@@ -263,7 +230,13 @@ function App(props) {
       {/* ✏️ Edit the header and change the title to your project name */}
       <Header>
         {/* 👨‍💼 Your account is in the top right with a wallet at connect options */}
-        <div style={{ position: "relative", display: "flex", flexDirection: "column" }}>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           <div style={{ display: "flex", flex: 1 }}>
             {USE_NETWORK_SELECTOR && (
               <div style={{ marginRight: 20 }}>
@@ -288,11 +261,14 @@ function App(props) {
               blockExplorer={blockExplorer}
             />
             <div
-              onClick={() => {
-                setShowSettings(!showSettings);
+              onClick={() => setShowSettings(!showSettings)}
+              style={{
+                cursor: "pointer",
+                fontSize: 18,
+                paddingTop: 4,
+                paddingLeft: 8,
               }}
-              style={{ cursor: "pointer", fontSize: 18, paddingTop: 4, paddingLeft: 8 }}
-            ></div>
+            />
           </div>
         </div>
       </Header>
@@ -357,7 +333,15 @@ function App(props) {
       </Switch>
 
       {/* 🗺 Extra UI like gas price, eth price, faucet, and support: */}
-      <div style={{ position: "fixed", textAlign: "left", left: 0, bottom: 20, padding: 10 }}>
+      <div
+        style={{
+          position: "fixed",
+          textAlign: "left",
+          left: 0,
+          bottom: 20,
+          padding: 10,
+        }}
+      >
         <Row align="middle" gutter={[4, 4]}>
           <Col span={24}>
             {

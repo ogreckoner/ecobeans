@@ -1,45 +1,41 @@
-import { KeyOutlined, QrcodeOutlined, SendOutlined, WalletOutlined, SettingOutlined } from "@ant-design/icons";
-import { Button, message, Modal, Spin, Tooltip, Typography } from "antd";
+import React, { useEffect, useState } from "react";
+import { Button, Modal, Spin, Tooltip, Typography } from "antd";
+import { KeyOutlined, SettingOutlined } from "@ant-design/icons";
 import { ethers } from "ethers";
 import QR from "qrcode.react";
-import React, { useEffect, useState } from "react";
 
-import { Transactor } from "../helpers";
 import Address from "./Address";
-import AddressInput from "./AddressInput";
-import Balance from "./Balance";
-import EtherInput from "./EtherInput";
 import WalletImport from "./WalletImport";
 
 const { Text } = Typography;
 
 /**
-  ~ What it does? ~
+ ~ What it does? ~
 
-  Displays a wallet where you can specify address and send USD/ETH, with options to
-  scan address, to convert between USD and ETH, to see and generate private keys,
-  to send, receive and extract the burner wallet
+ Displays a wallet where you can specify address and send USD/ETH, with options to
+ scan address, to convert between USD and ETH, to see and generate private keys,
+ to send, receive and extract the burner wallet
 
-  ~ How can I use? ~
+ ~ How can I use? ~
 
-  <Wallet
-    provider={userProvider}
-    address={address}
-    ensProvider={mainnetProvider}
-    price={price}
-    color='red'
-  />
+ <Wallet
+ provider={userProvider}
+ address={address}
+ ensProvider={mainnetProvider}
+ price={price}
+ color='red'
+ />
 
-  ~ Features ~
+ ~ Features ~
 
-  - Provide provider={userProvider} to display a wallet
-  - Provide address={address} if you want to specify address, otherwise
-                                                    your default address will be used
-  - Provide ensProvider={mainnetProvider} and your address will be replaced by ENS name
-              (ex. "0xa870" => "user.eth") or you can enter directly ENS name instead of address
-  - Provide price={price} of ether and easily convert between USD and ETH
-  - Provide color to specify the color of wallet icon
-**/
+ - Provide provider={userProvider} to display a wallet
+ - Provide address={address} if you want to specify address, otherwise
+ your default address will be used
+ - Provide ensProvider={mainnetProvider} and your address will be replaced by ENS name
+ (ex. "0xa870" => "user.eth") or you can enter directly ENS name instead of address
+ - Provide price={price} of ether and easily convert between USD and ETH
+ - Provide color to specify the color of wallet icon
+ **/
 
 export default function Wallet(props) {
   const [signerAddress, setSignerAddress] = useState();
@@ -50,6 +46,7 @@ export default function Wallet(props) {
         setSignerAddress(newAddress);
       }
     }
+
     getAddress();
   }, [props.signer]);
 
@@ -57,8 +54,6 @@ export default function Wallet(props) {
 
   const [open, setOpen] = useState();
   const [qr, setQr] = useState();
-  const [amount, setAmount] = useState();
-  const [toAddress, setToAddress] = useState();
   const [pk, setPK] = useState();
 
   const [showImport, setShowImport] = useState();
@@ -94,7 +89,6 @@ export default function Wallet(props) {
   );
 
   let display;
-  let receiveButton;
   let privateKeyButton;
   if (qr) {
     display = (
@@ -111,16 +105,6 @@ export default function Wallet(props) {
           imageSettings={{ excavate: false }}
         />
       </div>
-    );
-    receiveButton = (
-      <Button
-        key="hide"
-        onClick={() => {
-          setQr("");
-        }}
-      >
-        <QrcodeOutlined /> Hide
-      </Button>
     );
     privateKeyButton = (
       <Button
@@ -172,8 +156,6 @@ export default function Wallet(props) {
         }
       }
 
-      const fullLink = "https://be4ns.com/pk#" + pk;
-
       display = (
         <div>
           <div>
@@ -197,44 +179,10 @@ export default function Wallet(props) {
 
             <br />
           </div>
-
-          {/*extraPkDisplay ? (
-            <div>
-              <h3>Known Private Keys:</h3>
-              {extraPkDisplay}
-              <Button
-                onClick={() => {
-                  const currentPrivateKey = window.localStorage.getItem("metaPrivateKey");
-                  if (currentPrivateKey) {
-                    window.localStorage.setItem("metaPrivateKey_backup" + Date.now(), currentPrivateKey);
-                  }
-                  const randomWallet = ethers.Wallet.createRandom();
-                  const privateKey = randomWallet._signingKey().privateKey;
-                  window.localStorage.setItem("metaPrivateKey", privateKey);
-                  window.location.reload();
-                }}
-              >
-                Generate
-              </Button>
-            </div>
-          ) : (
-            ""
-          )*/}
         </div>
       );
     }
 
-    receiveButton = (
-      <Button
-        key="receive"
-        onClick={() => {
-          setQr(selectedAddress);
-          setPK("");
-        }}
-      >
-        <QrcodeOutlined /> Receive
-      </Button>
-    );
     privateKeyButton = (
       <Button
         key="hide"
@@ -247,20 +195,6 @@ export default function Wallet(props) {
       </Button>
     );
   } else {
-    const inputStyle = {
-      padding: 10,
-    };
-    receiveButton = (
-      <Button
-        key="receive"
-        onClick={() => {
-          setQr(selectedAddress);
-          setPK("");
-        }}
-      >
-        <QrcodeOutlined /> Receive
-      </Button>
-    );
     privateKeyButton = (
       <Button
         key="hide"

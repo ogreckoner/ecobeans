@@ -59,7 +59,10 @@ export default function L2ArbitrumBridge({ address, userSigner }) {
     setProviders();
   }, [rollup, activeConfig.L1, activeConfig.L2]);
 
-  const contracts = useContractLoader(userSigner, { externalContracts: L1BridgeMetadata, hardhatContracts: {} });
+  const contracts = useContractLoader(userSigner, {
+    externalContracts: L1BridgeMetadata,
+    hardhatContracts: {},
+  });
 
   useOnBlock(L1Provider, async () => {
     console.log(`⛓ A new mainnet block is here: ${L1Provider._lastBlockNumber}`);
@@ -161,7 +164,15 @@ export default function L2ArbitrumBridge({ address, userSigner }) {
 
   return (
     <div style={{ padding: 16, width: 800, margin: "auto", marginBottom: 128 }}>
-      <div style={{ border: "1px solid #cccccc", padding: 16, width: 800, margin: "auto", marginBottom: 128 }}>
+      <div
+        style={{
+          border: "1px solid #cccccc",
+          padding: 16,
+          width: 800,
+          margin: "auto",
+          marginBottom: 128,
+        }}
+      >
         <h2>Welcome to the L2 Deposit Bridge!</h2>
         <Radio.Group
           value={rollup}
@@ -229,7 +240,12 @@ const ArbitrumInboxABI = [
   {
     anonymous: false,
     inputs: [
-      { indexed: true, internalType: "uint256", name: "messageNum", type: "uint256" },
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "messageNum",
+        type: "uint256",
+      },
       { indexed: false, internalType: "bytes", name: "data", type: "bytes" },
     ],
     name: "InboxMessageDelivered",
@@ -237,13 +253,27 @@ const ArbitrumInboxABI = [
   },
   {
     anonymous: false,
-    inputs: [{ indexed: true, internalType: "uint256", name: "messageNum", type: "uint256" }],
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "messageNum",
+        type: "uint256",
+      },
+    ],
     name: "InboxMessageDeliveredFromOrigin",
     type: "event",
   },
   {
     anonymous: false,
-    inputs: [{ indexed: false, internalType: "address", name: "newSource", type: "address" }],
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "newSource",
+        type: "address",
+      },
+    ],
     name: "WhitelistSourceUpdated",
     type: "event",
   },
@@ -259,8 +289,16 @@ const ArbitrumInboxABI = [
       { internalType: "address", name: "destAddr", type: "address" },
       { internalType: "uint256", name: "l2CallValue", type: "uint256" },
       { internalType: "uint256", name: "maxSubmissionCost", type: "uint256" },
-      { internalType: "address", name: "excessFeeRefundAddress", type: "address" },
-      { internalType: "address", name: "callValueRefundAddress", type: "address" },
+      {
+        internalType: "address",
+        name: "excessFeeRefundAddress",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "callValueRefundAddress",
+        type: "address",
+      },
       { internalType: "uint256", name: "maxGas", type: "uint256" },
       { internalType: "uint256", name: "gasPriceBid", type: "uint256" },
       { internalType: "bytes", name: "data", type: "bytes" },

@@ -37,7 +37,7 @@ export default function QRPunkBlockie(props) {
           top: hardcodedSizeForNow / 2 - 46,
         }}
       >
-        <img src="./$ECO_square.png" style={{ width: 92, height: 92 }} />
+        <img alt="logo" src="./$ECO_square.png" style={{ width: 92, height: 92 }} />
       </div>
 
       {props.withQr ? (
@@ -53,7 +53,14 @@ export default function QRPunkBlockie(props) {
       )}
 
       {props.showAddress ? (
-        <div style={{ fontWeight: "bolder", letterSpacing: -0.8, color: "#666666", fontSize: 14.8 }}>
+        <div
+          style={{
+            fontWeight: "bolder",
+            letterSpacing: -0.8,
+            color: "#666666",
+            fontSize: 14.8,
+          }}
+        >
           {props.address}
         </div>
       ) : (
