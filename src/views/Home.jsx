@@ -3,11 +3,12 @@ import { Button, Input } from "antd";
 import { CaretUpOutlined, ScanOutlined, SendOutlined } from "@ant-design/icons";
 import { ethers } from "ethers";
 import { useContractReader } from "eth-hooks";
-import { useHistory, useParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import AddressInput from "../components/AddressInput";
 import QRPunkBlockie from "../components/QRPunkBlockie";
-import { useGasless } from "../hooks/useGasless";
+import { useGasless } from "../hooks";
+import { formatAmount } from "../helpers/formatAmount";
 
 const ERC20_ABI = ["function balanceOf(address owner) view returns (uint256)"];
 const REACT_APP_ECO_TOKEN_ADDRESS = process.env.REACT_APP_ECO_TOKEN_ADDRESS;
@@ -18,7 +19,7 @@ function round(number, decimals) {
 }
 
 function Home({ network, userSigner, address, localProvider }) {
-  let history = useHistory();
+  const navigate = useNavigate();
 
   const readContracts = useMemo(
     () => ({
@@ -40,38 +41,25 @@ function Home({ network, userSigner, address, localProvider }) {
 
   let scanner;
 
-  let params = useParams();
+  const [searchParams] = useSearchParams();
   useEffect(() => {
-    if (params.address) {
-      setToAddress(params.address);
-      history.push("/");
+    const _address = searchParams.get("addr");
+    if (_address) {
+      setToAddress(_address);
+      navigate("/");
     }
-  }, [history, params.address]);
+  }, [navigate, searchParams]);
 
   const doSend = async () => {
     setLoading(true);
-
-    let value;
-    try {
-      console.log("PARSE ETHER", amount);
-      value = ethers.utils.parseEther("" + amount);
-      console.log("PARSEDVALUE", value);
-    } catch (e) {
-      const floatVal = parseFloat(amount).toFixed(8);
-      console.log("floatVal", floatVal);
-      // failed to parseEther, try something else
-      value = ethers.utils.parseEther("" + floatVal);
-      console.log("PARSEDfloatVALUE", value);
-    }
-
-    // setToAddress("")
+    const value = formatAmount(amount);
     try {
       await gasless.transfer(toAddress, value);
       setAmount("");
-      setLoading(false);
-      window.scrollTo(0, 0);
     } catch (e) {
       console.log("[gasless:transfer]", e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -115,8 +103,7 @@ function Home({ network, userSigner, address, localProvider }) {
           width: 400,
         }}
       >
-        <QRPunkBlockie withQr={true} address={address} />
-        {/*<Address address={address} ensProvider={localProvider} hideBlockie={true} fontSize={18} />*/}
+        <QRPunkBlockie withQr address={address} />
       </div>
 
       <div style={{ margin: "auto", marginTop: 32, width: 300 }}>
@@ -171,9 +158,9 @@ function Home({ network, userSigner, address, localProvider }) {
           {loading || !amount || !toAddress ? <CaretUpOutlined /> : <SendOutlined style={{ color: "#FFFFFF" }} />}
           <span
             style={{
-              "font-family": "romana",
-              "padding-left": 20,
-              "padding-right": 20,
+              fontFamily: "romana",
+              paddingLeft: 20,
+              paddingRight: 20,
             }}
           >
             Send

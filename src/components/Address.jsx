@@ -56,7 +56,9 @@ export default function Address(props) {
   if (props.minimized) {
     return (
       <span style={{ verticalAlign: "middle" }}>
-        <a style={{ color: "#06153c" }} target="_blank" href={etherscanLink} rel="noopener noreferrer" />
+        <a style={{ color: "#06153c" }} target="_blank" href={etherscanLink} rel="noopener noreferrer">
+          {displayAddress}
+        </a>
       </span>
     );
   }

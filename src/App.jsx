@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Route, Switch } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { ethers } from "ethers";
 import { useUserProviderAndSigner } from "eth-hooks";
 
@@ -38,13 +38,7 @@ function App() {
   const { signer: userSigner } = useUserProviderAndSigner(injectedProvider, localProvider, true);
 
   useEffect(() => {
-    async function getAddress() {
-      if (userSigner) {
-        const newAddress = await userSigner.getAddress();
-        setAddress(newAddress);
-      }
-    }
-    getAddress();
+    userSigner?.getAddress().then(address => address && setAddress(address));
   }, [userSigner]);
 
   const loadWeb3Modal = useCallback(async () => {
@@ -76,19 +70,31 @@ function App() {
     web3Modal.isSafeApp().then(isSafeApp => isSafeApp && loadWeb3Modal());
   }, [loadWeb3Modal]);
 
+  const routes = (
+    <Routes>
+      <Route
+        exact
+        path="/"
+        element={
+          <Home address={address} userSigner={userSigner} localProvider={localProvider} network={targetNetwork} />
+        }
+      />
+      <Route
+        exact
+        path="/:address"
+        element={
+          <Home address={address} userSigner={userSigner} localProvider={localProvider} network={targetNetwork} />
+        }
+      />
+    </Routes>
+  );
+
   return (
     <div className="App">
       <Header>
         <Account address={address} userSigner={userSigner} localProvider={localProvider} />
       </Header>
-      <Switch>
-        <Route exact path="/">
-          <Home address={address} userSigner={userSigner} localProvider={localProvider} network={targetNetwork} />
-        </Route>
-        <Route exact path="/:address">
-          <Home address={address} userSigner={userSigner} localProvider={localProvider} network={targetNetwork} />
-        </Route>
-      </Switch>
+      {address ? routes : <div style={{ height: 800 }} />}
       <Footer />
     </div>
   );

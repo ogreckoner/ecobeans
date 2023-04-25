@@ -1,18 +1,23 @@
-import React from "react";
+import React, { useMemo } from "react";
 import QR from "qrcode.react";
 import { message } from "antd";
 
 export default function QRPunkBlockie(props) {
   const hardcodedSizeForNow = 380;
-  const qrValue = props.address ? new URL(props.address, window.location.href).toString() : "";
+
+  const qrValue = useMemo(() => {
+    const url = new URL("", window.location.origin);
+    url.searchParams.set("addr", props.address);
+    return props.address ? url.toString() : "";
+  }, [props.address]);
 
   return (
     <div
       style={{
-        transform: "scale(" + (props.scale ? props.scale : "1") + ")",
-        transformOrigin: "50% 50%",
         margin: "auto",
         position: "relative",
+        transformOrigin: "50% 50%",
+        transform: "scale(" + (props.scale ? props.scale : "1") + ")",
         width: hardcodedSizeForNow,
       }}
       onClick={() => {

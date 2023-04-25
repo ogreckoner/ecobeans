@@ -86,29 +86,23 @@ export default function AddressInput(props) {
           <QrReader
             delay={250}
             resolution={1200}
-            onError={e => {
-              console.log("SCAN ERROR", e);
-              setScan(false);
-            }}
+            style={{ width: "100%" }}
+            onError={e => setScan(false)}
             onScan={newValue => {
               if (newValue) {
-                console.log("SCAN VALUE", newValue);
                 newValue = newValue.replace("ethereum:", "");
                 newValue = newValue.replace("eth:", "");
                 newValue = newValue.replace("https://be4ns.com/", "");
-                console.log("FINAL VALUE AFTER CLEANING", newValue);
 
                 let possibleNewValue = newValue;
                 if (possibleNewValue.indexOf("/") >= 0) {
                   possibleNewValue = possibleNewValue.substr(possibleNewValue.lastIndexOf("0x"));
-                  console.log("CLEANED VALUE", possibleNewValue);
                 }
                 setScan(false);
                 updateAddress(possibleNewValue);
                 window.scrollTo(0, 700);
               }
             }}
-            style={{ width: "100%" }}
           />
         </div>
       ) : (
@@ -116,14 +110,13 @@ export default function AddressInput(props) {
       )}
       <Input
         size="large"
-        id="0xAddress" // name it something other than address for auto fill doxxing
-        name="0xAddress" // name it something other than address for auto fill doxxing
+        id="0xAddress"
+        name="0xAddress"
         autoComplete="off"
         disabled={props.disabled}
         autoFocus={props.autoFocus}
         placeholder={props.placeholder ? props.placeholder : "address"}
         style={{ fontSize: 20, fontFamily: "'Rubik', sans-serif" }}
-        // prefix={<Blockie address={currentValue} size={8} scale={3} />}
         value={ethers.utils.isAddress(currentValue) && !isENS(currentValue) && isENS(ens) ? ens : currentValue}
         onChange={e => updateAddress(e.target.value)}
         addonAfter={
