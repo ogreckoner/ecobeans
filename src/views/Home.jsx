@@ -1,22 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Button, Input } from "antd";
-import { CaretUpOutlined, ScanOutlined, SendOutlined } from "@ant-design/icons";
 import { ethers } from "ethers";
+import { Button, Input } from "antd";
 import { useContractReader } from "eth-hooks";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { CaretUpOutlined, ScanOutlined, SendOutlined } from "@ant-design/icons";
 
 import AddressInput from "../components/AddressInput";
 import QRPunkBlockie from "../components/QRPunkBlockie";
 import { useGasless } from "../hooks";
-import { formatAmount } from "../helpers/formatAmount";
+import { formatAmount, round } from "../helpers";
 
 const ERC20_ABI = ["function balanceOf(address owner) view returns (uint256)"];
 const REACT_APP_ECO_TOKEN_ADDRESS = process.env.REACT_APP_ECO_TOKEN_ADDRESS;
-
-function round(number, decimals) {
-  const d = Math.pow(10, decimals);
-  return Math.round((number + Number.EPSILON) * d) / d;
-}
 
 function getTotal(amount, fee) {
   try {
@@ -101,7 +96,7 @@ function Home({ network, userSigner, address, localProvider }) {
         }}
       >
         <span style={{ fontSize: 60, letterSpacing: 0 }}>ⓔ</span>
-        {balance ? round(parseFloat(ethers.utils.formatEther(balance)), 4).toFixed(4) : "---"}
+        {balance ? round(parseFloat(ethers.utils.formatEther(balance)), 3) : "---"}
       </div>
 
       <div
