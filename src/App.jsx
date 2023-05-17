@@ -2,15 +2,14 @@ import React, { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useUserProviderAndSigner } from "eth-hooks";
 
-import "./App.css";
-
-import { Home } from "./views";
-import { useStaticJsonRPC } from "./hooks";
-import { Account, Header } from "./components";
 import { NETWORKS } from "./constants";
+import { About, Home } from "./views";
+import { useStaticJsonRPC } from "./hooks";
+import { Account, Header, Footer } from "./components";
 
+import "./index.css";
+import "./App.css";
 import "antd/dist/antd.css";
-import { Footer } from "./components/Footer";
 
 const initialNetwork = NETWORKS[process.env.REACT_APP_NETWORK ?? "goerli"];
 const selectedNetwork = initialNetwork.name;
@@ -36,6 +35,7 @@ function App() {
           <Home address={address} userSigner={userSigner} localProvider={localProvider} network={targetNetwork} />
         }
       />
+      <Route exact path="/about" element={<About />} />
       <Route
         exact
         path="/:address"
