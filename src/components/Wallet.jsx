@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button, Modal, Spin, Tooltip, Typography } from "antd";
+import { Button, Input, Modal, Space, Spin, Tooltip, Typography } from "antd";
 import { KeyOutlined, SettingOutlined } from "@ant-design/icons";
 import { ethers } from "ethers";
 import QR from "qrcode.react";
@@ -105,16 +105,6 @@ export default function Wallet({ address, padding, color, provider, size }) {
         }
       }
 
-      const useForm = !window.PasswordCredential;
-      const saveCredentials = async () => {
-        const cred = new window.PasswordCredential({
-          id: "Eco Wallet - " + address,
-          name: "Eco Wallet - " + address,
-          password: pk,
-        });
-        await navigator.credentials.store(cred);
-      };
-
       display = (
         <div>
           <div>
@@ -125,23 +115,15 @@ export default function Wallet({ address, padding, color, provider, size }) {
               </i>
             </div>
             <br />
-
-            {useForm ? (
-              <form id="pk">
-                <span style={{ display: "none" }}>
-                  <input type="text" name="username" value={"Eco Wallet - " + address} />
-                  <input type="password" name="password" value={pk} />
-                </span>
-                <button id="submitPk" type="submit" value="Save Access" action="#">
+            <form id="pk" action="#">
+              <Space direction="vertical">
+                <Input name="username" value={"Eco Wallet - " + address} />
+                <Input.Password name="password" value={pk} />
+                <Button id="submitPk" htmlType="submit" value="Save Access">
                   Save Access
-                </button>
-              </form>
-            ) : (
-              <button type="submit" value="Save Access" onClick={saveCredentials}>
-                Save Access
-              </button>
-            )}
-
+                </Button>
+              </Space>
+            </form>
             <br />
           </div>
         </div>

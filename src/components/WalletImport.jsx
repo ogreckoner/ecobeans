@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button, Input } from "antd";
+import { Button, Input, Space } from "antd";
 
 export default function WalletImport({ setShowImport }) {
   const [importPrivatekey, setImportPrivatekey] = useState();
@@ -29,16 +29,16 @@ export default function WalletImport({ setShowImport }) {
 
       <br />
 
-      <Input size="large" placeholder="Use your saved passwords" name="username" autocomplete="username" />
-      <Input.Password
-        size="large"
-        placeholder="0x..."
-        autocomplete="current-password"
-        style={{ display: "none" }}
-        value={importPrivatekey}
-        onChange={e => setImportPrivatekey(e.target.value)}
-      />
-
+      <Space direction="vertical">
+        <Input.Password
+          size="large"
+          name="password"
+          placeholder="Use your saved passwords"
+          autocomplete="current-password"
+          value={importPrivatekey}
+          onChange={e => setImportPrivatekey(e.target.value)}
+        />
+      </Space>
       <hr />
 
       <div style={{ float: "right" }}>
