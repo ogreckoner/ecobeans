@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ethers } from "ethers";
-import { Button, Input, Space } from "antd";
+import { Button, FloatButton, Input, Space } from "antd";
 import { useContractReader } from "eth-hooks";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CaretUpOutlined, ScanOutlined, SendOutlined } from "@ant-design/icons";
+import { ScanOutlined, SendOutlined } from "@ant-design/icons";
 
+import { formatAmount, round } from "../helpers";
 import AddressInput from "../components/AddressInput";
 import QRPunkBlockie from "../components/QRPunkBlockie";
-import { formatAmount, round } from "../helpers";
 import { useStackup } from "../contexts/StackupContext";
+import { ReactComponent as EcoLogo } from "../assets/images/eco-logo.svg";
 
 const ERC20_ABI = ["function balanceOf(address owner) view returns (uint256)"];
 const REACT_APP_ECO_TOKEN_ADDRESS = process.env.REACT_APP_ECO_TOKEN_ADDRESS;
@@ -21,7 +22,7 @@ function getTotal(amount) {
   }
 }
 
-function Home({ network, signer, provider }) {
+function Home({ network, provider }) {
   const stackup = useStackup();
   const navigate = useNavigate();
 
@@ -30,11 +31,10 @@ function Home({ network, signer, provider }) {
   const eco = useMemo(() => new ethers.Contract(REACT_APP_ECO_TOKEN_ADDRESS, ERC20_ABI, provider), [provider]);
   const [balance] = useContractReader(eco, eco.balanceOf, [address], 4000);
 
-  const [loading, setLoading] = useState(false);
-  const [lastTx, setLastTx] = useState("");
-
   const [amount, setAmount] = useState();
   const [toAddress, setToAddress] = useState();
+  const [lastTx, setLastTx] = useState("");
+  const [loading, setLoading] = useState(false);
 
   let scanner;
 
@@ -72,39 +72,40 @@ function Home({ network, signer, provider }) {
   const disabled = exceedsBalance || loading || !amount || !toAddress;
 
   return (
-    <Space direction="vertical" style={{ marginTop: 24 }}>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "center",
-          margin: "auto",
-          textAlign: "right",
-          gap: 8,
-          width: 500,
-          fontFamily: "'Rubik', sans-serif",
-          fontSize: 50,
-          letterSpacing: -0.5,
-        }}
-      >
-        <span style={{ fontSize: 36, letterSpacing: 0 }}>ⓔ</span>
-        {balance ? round(parseFloat(ethers.utils.formatEther(balance)), 3) : "---"}
-      </div>
+    <Space direction="vertical" size="large" style={{ marginTop: 24 }}>
+      <Space direction="vertical">
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "auto",
+            textAlign: "right",
+            gap: 8,
+            width: 500,
+            fontFamily: "'Rubik', sans-serif",
+            fontSize: 50,
+            letterSpacing: -0.5,
+          }}
+        >
+          <EcoLogo style={{ width: 28, height: 28 }} />
+          {balance ? round(parseFloat(ethers.utils.formatEther(balance)), 3) : "---"}
+        </div>
 
-      <div
-        style={{
-          margin: "auto",
-          position: "relative",
-          backgroundColor: "#ffffff",
-          padding: 8,
-          width: 400,
-        }}
-      >
-        <QRPunkBlockie withQr address={address} />
-      </div>
-
-      <div style={{ margin: "auto", marginTop: 32, width: 300 }}>
+        <div
+          style={{
+            margin: "auto",
+            position: "relative",
+            backgroundColor: "#ffffff",
+            padding: 8,
+            width: 400,
+          }}
+        >
+          <QRPunkBlockie address={address} />
+        </div>
+      </Space>
+      <div style={{ margin: "auto", width: 300 }}>
         <AddressInput
           placeholder="to address"
           value={toAddress}
@@ -113,22 +114,21 @@ function Home({ network, signer, provider }) {
           hoistScanner={toggle => (scanner = toggle)}
         />
       </div>
-      <div style={{ margin: "auto", marginTop: 32, width: 300 }}>
+      <div style={{ margin: "auto", width: 300 }}>
         <Input
-          size="large"
           type="number"
           min="0"
           pattern="\d*"
-          prefix="ⓔ"
           placeholder="amount to send"
           value={amount}
+          onKeyPress={handleKey}
+          onChange={e => setAmount(e.target.value)}
+          prefix={<EcoLogo style={{ width: 20, height: 20 }} />}
           style={{
             fontSize: 20,
             width: 300,
             fontFamily: "'Rubik', sans-serif",
           }}
-          onChange={e => setAmount(e.target.value)}
-          onKeyPress={handleKey}
         />
       </div>
 
@@ -145,31 +145,18 @@ function Home({ network, signer, provider }) {
           alignItems: "center",
           gap: 8,
           margin: "auto",
-          marginTop: 32,
-          width: 500,
         }}
       >
         <Button
           key="submit"
           size="large"
-          disabled={disabled}
-          loading={loading}
+          type="primary"
           onClick={doSend}
-          style={{
-            marginTop: 8,
-            ...(disabled ? {} : { color: "white", backgroundColor: "#06153c" }),
-          }}
+          loading={loading}
+          disabled={disabled}
+          icon={<SendOutlined />}
         >
-          {loading || !amount || !toAddress ? <CaretUpOutlined /> : <SendOutlined style={{ color: "#FFFFFF" }} />}
-          <span
-            style={{
-              fontFamily: "romana",
-              paddingLeft: 20,
-              paddingRight: 20,
-            }}
-          >
-            Send
-          </span>
+          Send
         </Button>
 
         {loading ? (
@@ -183,30 +170,14 @@ function Home({ network, signer, provider }) {
           </span>
         ) : null}
         {/*{gasless.error ? <span style={{ color: "rgb(200,0,0)" }}>{gasless.error}</span> : null}*/}
-
-        <div
-          style={{
-            transform: "scale(2.5)",
-            transformOrigin: "70% 80%",
-            position: "fixed",
-            textAlign: "right",
-            right: 16,
-            bottom: 16,
-            padding: 10,
-            zIndex: 257,
-          }}
-        >
-          <Button
-            type="primary"
-            shape="circle"
-            size="large"
-            onClick={() => scanner(true)}
-            style={{ zIndex: 257, border: 0, backgroundColor: "#021540" }}
-          >
-            <ScanOutlined style={{ color: "#FFFFFF" }} />
-          </Button>
-        </div>
       </div>
+      <FloatButton
+        type="primary"
+        shape="circle"
+        onClick={() => scanner(true)}
+        icon={<ScanOutlined />}
+        style={{ transform: "scale(2)", right: 48 }}
+      />
     </Space>
   );
 }
