@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ethers } from "ethers";
-import { Button, FloatButton, Input, Space } from "antd";
+import { Button, FloatButton, Input, Skeleton, Space, Typography } from "antd";
 import { useContractReader } from "eth-hooks";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ScanOutlined, SendOutlined } from "@ant-design/icons";
@@ -10,8 +10,9 @@ import AddressInput from "../components/AddressInput";
 import QRPunkBlockie from "../components/QRPunkBlockie";
 import { useStackup } from "../contexts/StackupContext";
 import { ReactComponent as EcoLogo } from "../assets/images/eco-logo.svg";
+import { useEcoPrice } from "../hooks";
+import { ERC20_ABI } from "../assets/abis/ERC20";
 
-const ERC20_ABI = ["function balanceOf(address owner) view returns (uint256)"];
 const REACT_APP_ECO_TOKEN_ADDRESS = process.env.REACT_APP_ECO_TOKEN_ADDRESS;
 
 function getTotal(amount) {
@@ -22,21 +23,18 @@ function getTotal(amount) {
   }
 }
 
+let scanner;
+
 function Home({ network, provider }) {
   const stackup = useStackup();
   const navigate = useNavigate();
-
-  const address = stackup.simpleAccount?.getSender();
-
-  const eco = useMemo(() => new ethers.Contract(REACT_APP_ECO_TOKEN_ADDRESS, ERC20_ABI, provider), [provider]);
-  const [balance] = useContractReader(eco, eco.balanceOf, [address], 4000);
 
   const [amount, setAmount] = useState();
   const [toAddress, setToAddress] = useState();
   const [lastTx, setLastTx] = useState("");
   const [loading, setLoading] = useState(false);
 
-  let scanner;
+  const { data: ecoPrice } = useEcoPrice();
 
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -66,9 +64,13 @@ function Home({ network, provider }) {
     if (event.key === "Enter") doSend();
   };
 
-  const total = getTotal(amount);
-  const exceedsBalance = total.gt(balance || ethers.constants.Zero);
+  const address = stackup.simpleAccount?.getSender();
+  const eco = useMemo(() => new ethers.Contract(REACT_APP_ECO_TOKEN_ADDRESS, ERC20_ABI, provider), [provider]);
+  const [balance] = useContractReader(eco, eco.balanceOf, [address], 4000);
 
+  const total = getTotal(amount);
+  const tokensFee = ecoPrice && (Number(stackup.expectedGasFee.toBigInt()) / 1e18) * (1 / ecoPrice);
+  const exceedsBalance = total.add(ethers.utils.parseEther(tokensFee.toString())).gt(balance || ethers.constants.Zero);
   const disabled = exceedsBalance || loading || !amount || !toAddress;
 
   return (
@@ -131,13 +133,19 @@ function Home({ network, provider }) {
           }}
         />
       </div>
-
+      <Typography.Text>
+        <b>Expected Fee: </b>
+        {tokensFee ? (
+          `~${round(tokensFee, 2)} ECO`
+        ) : (
+          <Skeleton.Input active size="small" style={{ width: 80, minWidth: 80 }} />
+        )}
+      </Typography.Text>
       {exceedsBalance && amount ? (
         <div style={{ marginTop: 8 }}>
           <span style={{ color: "rgb(200,0,0)" }}>amount + fee exceeds balance</span>{" "}
         </div>
       ) : null}
-
       <div
         style={{
           display: "flex",
