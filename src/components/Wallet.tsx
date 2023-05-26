@@ -47,53 +47,43 @@ export const Wallet: React.FC<WalletProps> = ({ address, signer, padding, color,
   let display: React.ReactNode = null;
   let privateKeyButton;
   if (pk) {
-    const wallet = new ethers.Wallet(pk!);
-
-    if (wallet.address !== address) {
-      display = (
-        <div>
-          <b>*injected account*, private key unknown</b>
-        </div>
-      );
-    } else {
-      const extraPkDisplayAdded: any = {};
-      extraPkDisplayAdded[wallet.address] = true;
-      for (const key in localStorage) {
-        if (key.indexOf("metaPrivateKey_backup") >= 0) {
-          const pastpk = localStorage.getItem(key);
-          const pastwallet = new ethers.Wallet(pastpk!);
-          if (!extraPkDisplayAdded[pastwallet.address]) {
-            extraPkDisplayAdded[pastwallet.address] = true;
-          }
+    const extraPkDisplayAdded: any = {};
+    extraPkDisplayAdded[address] = true;
+    for (const key in localStorage) {
+      if (key.indexOf("metaPrivateKey_backup") >= 0) {
+        const pastpk = localStorage.getItem(key);
+        const pastwallet = new ethers.Wallet(pastpk!);
+        if (!extraPkDisplayAdded[pastwallet.address]) {
+          extraPkDisplayAdded[pastwallet.address] = true;
         }
       }
+    }
 
-      display = (
+    display = (
+      <div>
         <div>
           <div>
-            <div>
-              <i>
-                Pressing "Save Access" will prompt your browser to save access to your account. You can then access your
-                account using the saved credentials on this device or others.
-              </i>
-            </div>
-            <br />
-
-            <form id="pk" action="#">
-              <span style={{ display: "none" }}>
-                <input type="text" name="username" value={"Eco Wallet - " + address} />
-                <input type="password" name="password" value={pk} />
-              </span>
-              <Button id="submitPk" value="Save Access" htmlType="submit">
-                Save Access
-              </Button>
-            </form>
-
-            <br />
+            <i>
+              Pressing "Save Access" will prompt your browser to save access to your account. You can then access your
+              account using the saved credentials on this device or others.
+            </i>
           </div>
+          <br />
+
+          <form id="pk" action="#">
+            <span style={{ display: "none" }}>
+              <input type="text" name="username" value={"Eco Wallet - " + address} />
+              <input type="password" name="password" value={pk} />
+            </span>
+            <Button id="submitPk" value="Save Access" htmlType="submit">
+              Save Access
+            </Button>
+          </form>
+
+          <br />
         </div>
-      );
-    }
+      </div>
+    );
 
     privateKeyButton = (
       <Button key="hide" onClick={() => setPK("")} icon={<KeyOutlined />}>
