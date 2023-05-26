@@ -19,7 +19,7 @@ function App() {
   const routes = (
     <Routes>
       <Route path="/" element={<Home provider={provider} />} />
-      <Route path="/swap" element={<Swap provider={provider} />} />
+      {/*<Route path="/swap" element={<Swap provider={provider} />} />*/}
       <Route path="/about" element={<About />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
