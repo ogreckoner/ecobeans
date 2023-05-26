@@ -116,7 +116,7 @@ export const Wallet: React.FC<WalletProps> = ({ address, signer, padding, color,
         onOk={() => setOpen(!open)}
         onCancel={() => setOpen(!open)}
         footer={!showImport ? [showImportButton, privateKeyButton] : null}
-        title={address ? <Address address={address} provider={provider} /> : <Spin />}
+        title={address ? <Address copyable address={address} provider={provider} /> : <Spin />}
       >
         {showImport ? <WalletImport setShowImport={setShowImport} /> : display}
       </Modal>
