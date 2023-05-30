@@ -3,7 +3,7 @@ import { Skeleton, Typography } from "antd";
 import { formatTokenAmount } from "@helpers";
 
 interface TokenFeeProps {
-  fee?: number;
+  fee?: number | string;
 }
 
 export const TokenFee: React.FC<TokenFeeProps> = ({ fee }) => {

@@ -37,7 +37,7 @@ namespace Peanut {
     return { chainId, contractVersion, depositIdx, password };
   }
 
-  function getRandomString(length = 32) {
+  export function getRandomString(length = 32) {
     const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let result_str = "";
     for (let i = 0; i < length; i++) {
@@ -46,8 +46,7 @@ namespace Peanut {
     return result_str;
   }
 
-  export async function makeDeposit(amount: ethers.BigNumber) {
-    const password = getRandomString();
+  export async function makeDeposit(amount: ethers.BigNumber, password = getRandomString()) {
     const wallet = generateKeysFromString(password);
 
     const peanutInterface = PeanutV3__factory.createInterface();

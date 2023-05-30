@@ -5,29 +5,26 @@ import { Alert, Button, Input, InputProps, notification, Space, Typography } fro
 import isEqual from "lodash.isequal";
 
 import Peanut from "@modules/peanut";
-import { useTokenPrice } from "@hooks";
-import { getSimpleAccount, useStackup } from "@contexts/StackupContext";
+import { useStackup } from "@contexts/StackupContext";
 import { TokenFee } from "@components/commons/TokenFee";
 import { blockExplorerLink, convertAmount, formatTokenAmount } from "@helpers";
 
 import { PEANUT_V3_ADDRESS } from "@modules/peanut/constants";
-import { ERC20__factory, PeanutV3__factory } from "@assets/contracts";
-import { ECO_TOKEN_ADDRESS, VERIFYING_PAYMASTER_ADDRESS } from "@constants";
+import { PeanutV3__factory } from "@assets/contracts";
 
 import { ReactComponent as EcoLogo } from "@assets/images/eco-logo.svg";
 import { getTransaction } from "@helpers/contracts";
+import { usePeanutDeposit } from "@hooks/usePeanutDeposit";
+import { useQuery } from "react-query";
 
 function getValues({
   amount,
-  expectedGasFee,
-  ecoPrice,
   balance,
+  tokensFee,
 }: {
   amount: string;
-  // Expected Gas In ETH
-  expectedGasFee: ethers.BigNumber;
-  // ECO/ETH price
-  ecoPrice: number;
+  // Expected Gas In ECO tokens
+  tokensFee: ethers.BigNumber;
   // Wallet's current balance
   balance?: ethers.BigNumber;
 }) {
@@ -38,10 +35,9 @@ function getValues({
     total = ethers.constants.Zero;
   }
 
-  const tokensFee: number = ecoPrice && (Number(expectedGasFee.toBigInt()) / 1e18) * (1 / ecoPrice);
-  const exceedsBalance = total.add(ethers.utils.parseEther(tokensFee.toString())).gt(balance || ethers.constants.Zero);
+  const exceedsBalance = total.add(tokensFee).gt(balance || ethers.constants.Zero);
 
-  return { total, tokensFee, exceedsBalance };
+  return { total, exceedsBalance };
 }
 
 interface TransferProps {
@@ -55,9 +51,8 @@ interface ShareLink {
 }
 
 export const Share: React.FC<TransferProps> = ({ balance }) => {
-  const { address, client, provider, simpleAccount } = useStackup();
-
-  const { data: ecoPrice = 0 } = useTokenPrice("eco");
+  const { address, provider } = useStackup();
+  const { deposit, simulateDeposit } = usePeanutDeposit();
 
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
@@ -68,41 +63,9 @@ export const Share: React.FC<TransferProps> = ({ balance }) => {
     setShareLink(undefined);
     try {
       const value = convertAmount(amount);
-      const { password, transaction } = await Peanut.makeDeposit(value);
 
-      const eco = ERC20__factory.connect(ECO_TOKEN_ADDRESS, provider);
-      const peanut = PeanutV3__factory.connect(PEANUT_V3_ADDRESS, provider);
-
-      const peanutAllowance = await eco.allowance(address, PEANUT_V3_ADDRESS);
-      const paymasterAllowance = await eco.allowance(address, VERIFYING_PAYMASTER_ADDRESS);
-
-      const txs = [transaction];
-
-      if (peanutAllowance.lt(value)) {
-        const data = ERC20__factory.createInterface().encodeFunctionData("approve", [PEANUT_V3_ADDRESS, value]);
-        txs.push({ to: ECO_TOKEN_ADDRESS, data });
-      }
-
-      if (paymasterAllowance.lt(ethers.constants.WeiPerEther.mul(10_000))) {
-        // If paymaster's allowance is less than 10.000 ECO tokens
-        // Include token approval for paymaster to pay gas in ECO tokens
-        const data = ERC20__factory.createInterface().encodeFunctionData("approve", [
-          VERIFYING_PAYMASTER_ADDRESS,
-          ethers.constants.MaxUint256,
-        ]);
-        txs.push({ to: ECO_TOKEN_ADDRESS, data });
-      }
-
-      // Reverse order of transactions to execute token approvals first
-      txs.reverse();
-
-      simpleAccount.executeBatch(
-        txs.map(tx => tx.to),
-        txs.map(tx => tx.data),
-      );
-
-      const res = await client.sendUserOperation(simpleAccount);
-      const userOpResponse = await res.wait();
+      const password = Peanut.getRandomString();
+      const userOpResponse = await deposit(value, password);
 
       if (!userOpResponse) {
         notification.error({ message: "Unexpected error", description: "Please contact us for help" });
@@ -112,6 +75,7 @@ export const Share: React.FC<TransferProps> = ({ balance }) => {
       const tx = await getTransaction(provider, userOpResponse.transactionHash);
       const receipt = await tx.wait();
 
+      const peanut = PeanutV3__factory.connect(PEANUT_V3_ADDRESS, provider);
       const evt = peanut.filters.DepositEvent(null, null, null, address);
       const depositEvt = receipt.logs.find(log => log.address === evt.address && isEqual(log.topics, evt.topics));
 
@@ -157,8 +121,16 @@ export const Share: React.FC<TransferProps> = ({ balance }) => {
     if (event.key === "Enter") doSend();
   };
 
-  const expectedGasFee = ethers.constants.Zero;
-  const { tokensFee, exceedsBalance } = getValues({ amount, balance, expectedGasFee, ecoPrice });
+  const { data: tokensFee = ethers.constants.Zero } = useQuery<unknown, unknown, ethers.BigNumber>(
+    "expected-fee-share",
+    () => simulateDeposit(),
+    {
+      retry: false,
+      refetchInterval: 5_000,
+    },
+  );
+
+  const { exceedsBalance } = getValues({ amount, balance, tokensFee });
   const disabled = exceedsBalance || loading || !amount;
 
   return (
@@ -176,7 +148,7 @@ export const Share: React.FC<TransferProps> = ({ balance }) => {
         prefix={<EcoLogo style={{ width: 20, height: 20 }} />}
       />
 
-      <TokenFee fee={tokensFee} />
+      <TokenFee fee={parseFloat(ethers.utils.formatEther(tokensFee))} />
 
       {exceedsBalance && amount ? (
         <div style={{ marginTop: 8 }}>
