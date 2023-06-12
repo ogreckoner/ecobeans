@@ -20,7 +20,8 @@ async function getOperationFee(token: Token, operation: FeeOperation): Promise<B
   const [ecoPrice, tokenPrice] = await Promise.all([getTokenPrice(Token.ECO), getTokenPrice(token)]);
 
   const ecoFee = parseUnits(await getOperationFee(Token.ECO, operation));
-  const tokenFee = ecoFee * ecoPrice * (1 / tokenPrice);
+  // Fees for all other tokens as charged double the fee
+  const tokenFee = 2 * ecoFee * ecoPrice * (1 / tokenPrice);
   const { decimals } = getTokenInfo(token);
   return ethers.utils.parseUnits(round(tokenFee, decimals).toString(), decimals);
 }
