@@ -1,0 +1,69 @@
+# GitHub recommends pinning actions to a commit SHA.
+# To get a newer version, you will need to update the SHA.
+# You can also reference a tag or branch, but the action may change without warning.
+
+name: Sync to Amazon S3 and Cloudfront
+
+on:
+  push:
+    branches:
+      - prod
+
+env:
+  REACT_APP_COINMARKETCAP_API_KEY: ${{ vars.REACT_APP_COINMARKETCAP_API_KEY }}
+  REACT_APP_ECO_TOKEN_ADDRESS: ${{ vars.REACT_APP_ECO_TOKEN_ADDRESS }}
+  REACT_APP_FLAT_FEE_AMOUNT: ${{ vars.REACT_APP_FLAT_FEE_AMOUNT }}
+  REACT_APP_FLAT_FEE_RECIPIENT: ${{ vars.REACT_APP_FLAT_FEE_RECIPIENT }}
+  REACT_APP_INFURA_ID: ${{ vars.REACT_APP_INFURA_ID }}
+  REACT_APP_NETWORK: ${{ vars.REACT_APP_NETWORK }}
+  REACT_APP_RELAYER_URL: ${{ vars.REACT_APP_RELAYER_URL }}
+  REACT_APP_STACKUP_API_KEY: ${{ vars.REACT_APP_STACKUP_API_KEY }}
+  REACT_APP_USDC_TOKEN_ADDRESS: ${{ vars.REACT_APP_USDC_TOKEN_ADDRESS }}
+
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: production
+    strategy:
+      matrix:
+        node: [16.x]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup node env
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          cache : yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable --immutable-cache --check-cache
+
+      - name: Build Project
+        run:  
+          yarn build
+          
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@0e613a0980cbf65ed5b322eb7a1e075d28913a83
+        with:
+          aws-access-key-id: ${{ secrets.CI_S3_STATIC_KEY }}
+          aws-secret-access-key: ${{ secrets.CI_S3_STATIC_SECRET }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --follow-symlinks --delete
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          SOURCE_DIR: 'build'
+
+      - name: Invalidate CloudFront
+        uses: chetan/invalidate-cloudfront-action@v2
+        env:
+          DISTRIBUTION: ${{ secrets.AWS_CF_DISTRIBUTION_ID }}
+          PATHS: "/*"
