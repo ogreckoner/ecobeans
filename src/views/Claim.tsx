@@ -9,26 +9,26 @@ import * as Peanut from "@modules/peanut";
 import { Deposit } from "@modules/peanut/types";
 import { PEANUT_V3_ADDRESS } from "@modules/peanut/constants";
 
-import { getTransaction } from "@helpers/contracts";
-import { getTokenInfo, NETWORK, Token } from "@constants";
-import { blockExplorerLink, formatTokenAmount } from "@helpers";
-import { useStackup } from "@contexts/StackupContext";
-import { TokenIcon } from "@components/token";
 import { PeanutV3__factory } from "@assets/contracts";
+import { getTokenInfo, NETWORK, Token } from "@constants";
 
-interface ClaimProps {
-  provider: ethers.providers.JsonRpcProvider;
-}
+import { getTransaction } from "@helpers/contracts";
+import { blockExplorerLink, formatTokenAmount } from "@helpers";
 
-interface ClaimContentProps extends ClaimProps {
+import { TokenIcon } from "@components/token";
+import { useStackup } from "@contexts/StackupContext";
+import { getNetworkProvider } from "@modules/blockchain/providers";
+
+interface ClaimContentProps {
   token: Token;
+  chainId: number;
 }
 
-const TokenResolution: React.FC<{ children: (props: { token: Token }) => React.ReactElement | null }> = ({
+const TokenResolution: React.FC<{ children: (props: ClaimContentProps) => React.ReactElement | null }> = ({
   children,
 }) => {
   const navigate = useNavigate();
-  const { token: rawToken = "eco" } = Peanut.getParamsFromLink();
+  const { token: rawToken = "eco", chainId } = Peanut.getParamsFromLink();
 
   const [token, setToken] = useState<Token | undefined>();
 
@@ -43,23 +43,25 @@ const TokenResolution: React.FC<{ children: (props: { token: Token }) => React.R
 
   if (!token) return null;
 
-  return children({ token });
+  return children({ token, chainId: chainId || NETWORK.chainId });
 };
 
-export const Claim: React.FC<ClaimProps> = props => {
-  return <TokenResolution>{({ token }) => <ClaimContent token={token} {...props} />}</TokenResolution>;
+export const Claim: React.FC = props => {
+  return <TokenResolution>{resolutionProps => <ClaimContent {...resolutionProps} {...props} />}</TokenResolution>;
 };
 
-const ClaimContent: React.FC<ClaimContentProps> = ({ provider, token: tokenId }) => {
+const ClaimContent: React.FC<ClaimContentProps> = ({ token: tokenId, chainId }) => {
+  const token = getTokenInfo(tokenId);
+  const { depositIdx, password } = Peanut.getParamsFromLink();
+
   const navigate = useNavigate();
   const { address } = useStackup();
 
   const [loading, setLoading] = useState(false);
 
-  const token = getTokenInfo(tokenId);
-  const { depositIdx, password } = Peanut.getParamsFromLink();
-
+  const provider = useMemo(() => getNetworkProvider(chainId), [chainId]);
   const peanutV3 = useMemo(() => PeanutV3__factory.connect(PEANUT_V3_ADDRESS, provider), [provider]);
+
   const [result, , state] = useContractReader(peanutV3, peanutV3.deposits, [depositIdx!], undefined, {
     blockNumberInterval: 1,
     query: {

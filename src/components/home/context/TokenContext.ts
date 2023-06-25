@@ -2,8 +2,14 @@ import React, { useContext } from "react";
 import { Token } from "@constants";
 import { ethers } from "ethers";
 
-export const TokenContext = React.createContext<{ token: Token; balance: ethers.BigNumber }>({
+interface ITokenContext {
+  token: Token;
+  balance?: ethers.BigNumber;
+  baseBalance?: ethers.BigNumber;
+  optimismBalance?: ethers.BigNumber;
+}
+
+export const TokenContext = React.createContext<ITokenContext>({
   token: Token.ECO,
-  balance: ethers.constants.Zero,
 });
 export const useCurrentToken = () => useContext(TokenContext);

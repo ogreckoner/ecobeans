@@ -1,34 +1,36 @@
+import { useMemo } from "react";
 import { ethers } from "ethers";
+
 import { hasWalletBeenDeployed } from "@helpers";
 import { ERC20__factory } from "@assets/contracts";
+import { getTokenInfo, Network, Token } from "@constants";
+
 import { getSimpleAccount, useFunWallet } from "@contexts/FunWalletContext";
-import { getNetworkById, getTokenInfo, NETWORK, Token } from "@constants";
-import { useMemo } from "react";
+
+import { isBaseNetwork } from "@modules/blockchain/utils";
+import { getNetworkProvider } from "@modules/blockchain/providers";
 import {
   FLAT_VERIFYING_PAYMASTER_ADDRESS_BASE,
   FLAT_VERIFYING_PAYMASTER_ADDRESS_OPTIMISM,
-} from "@modules/fun/FunSimpleAccount";
+} from "@modules/fun/constants";
 
-export const useFunTokenTransfer = (tokenId: Token, network = NETWORK.chainId) => {
+export const useFunTokenTransfer = (tokenId: Token, network: Network | number = "optimism") => {
   const { address, wallet, signer } = useFunWallet();
 
-  const provider = useMemo(() => new ethers.providers.StaticJsonRpcProvider(getNetworkById(network)!.rpcUrl), []);
+  const provider = useMemo(() => getNetworkProvider(network), [network]);
 
-  const transfer = async (t: string, amount: ethers.BigNumber): Promise<string> => {
-    const token = getTokenInfo(tokenId, network);
+  const transfer = async (t: string, amount: ethers.BigNumber, fee: ethers.BigNumber): Promise<string> => {
     const to = ethers.utils.getAddress(t);
-
-    const erc20 = ERC20__factory.connect(token.address, provider);
-
-    const data = erc20.interface.encodeFunctionData("transfer", [to, amount]);
-
-    const simpleAccount = await getSimpleAccount(signer, provider);
-
-    const paymasterAddress = getNetworkById(network)?.name?.includes("base")
+    const token = getTokenInfo(tokenId, network);
+    const paymasterAddress = isBaseNetwork(network)
       ? FLAT_VERIFYING_PAYMASTER_ADDRESS_BASE
       : FLAT_VERIFYING_PAYMASTER_ADDRESS_OPTIMISM;
 
+    const simpleAccount = await getSimpleAccount(signer, provider);
     const hasBeenDeployed = await hasWalletBeenDeployed(provider, address);
+
+    const erc20 = ERC20__factory.connect(token.address, provider);
+    const data = erc20.interface.encodeFunctionData("transfer", [to, amount]);
 
     const allowance = await erc20.allowance(address, paymasterAddress);
     const hasEnoughAllowance = allowance.gte(ethers.utils.parseUnits("1000", token.decimals));
@@ -43,7 +45,7 @@ export const useFunTokenTransfer = (tokenId: Token, network = NETWORK.chainId) =
       );
     }
 
-    const res = await wallet.executeBatch(simpleAccount, network);
+    const res = await wallet.executeBatch(simpleAccount, provider.network.chainId, fee);
     return res.txid!;
   };
 

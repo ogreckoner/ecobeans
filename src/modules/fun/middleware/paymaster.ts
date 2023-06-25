@@ -10,8 +10,14 @@ import { getTokenInfo, Token } from "@constants";
 const signingWallet = new ethers.Wallet(process.env.REACT_APP_SIGNING_WALLET_PRIVATE_KEY!);
 
 export const flatVerifyingPaymaster =
-  (provider: ethers.providers.JsonRpcProvider, paymasterAddress: string, simulate = false): UserOperationMiddlewareFn =>
+  (
+    provider: ethers.providers.JsonRpcProvider,
+    paymasterAddress: string,
+    options: { simulate?: boolean; fee?: ethers.BigNumber } = {},
+  ): UserOperationMiddlewareFn =>
   async ctx => {
+    const { simulate = false, fee = FLAT_FEE_AMOUNT } = options;
+
     if (simulate) {
       ctx.op.verificationGasLimit = ethers.BigNumber.from(ctx.op.verificationGasLimit).mul(3);
     }
@@ -25,7 +31,7 @@ export const flatVerifyingPaymaster =
 
     const data = ethers.utils.defaultAbiCoder.encode(
       ["uint48", "uint48", "address", "uint256"],
-      [validUntil, validAfter, token.address, FLAT_FEE_AMOUNT],
+      [validUntil, validAfter, token.address, fee],
     );
     ctx.op.paymasterAndData = paymasterAddress + data.slice(2) + "0".repeat(128);
 

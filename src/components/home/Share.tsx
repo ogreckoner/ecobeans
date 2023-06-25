@@ -14,6 +14,7 @@ import { TokenFee } from "@components/commons/TokenFee";
 import { useCurrentToken } from "@components/home/context/TokenContext";
 import { FeeOperation, useOperationFee } from "@hooks/useOperationFee";
 import { getTokenInfo } from "@constants";
+import { OPTIMISM_PROVIDER } from "@modules/blockchain/providers";
 
 function getValues({
   amount,
@@ -40,17 +41,17 @@ function getValues({
 }
 
 export const Share: React.FC = () => {
+  const { address } = useStackup();
   const { token: tokenId, balance } = useCurrentToken();
-  const { address, provider } = useStackup();
   const { deposit: makeDeposit } = usePeanutDeposit();
-  const token = getTokenInfo(tokenId);
-
   const { data: fee } = useOperationFee(tokenId, FeeOperation.Share);
 
   const [alertApi, alertElemt] = useAlert({ className: "share-alert" });
 
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const token = getTokenInfo(tokenId);
 
   const doSend = async () => {
     if (!fee) return;
@@ -67,7 +68,7 @@ export const Share: React.FC = () => {
         return;
       }
 
-      const tx = await getTransaction(provider, userOpResponse.transactionHash);
+      const tx = await getTransaction(OPTIMISM_PROVIDER, userOpResponse.transactionHash);
       const receipt = await tx.wait();
 
       const deposit = Peanut.getDepositEvent(address, receipt);

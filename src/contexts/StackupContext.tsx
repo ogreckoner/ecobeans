@@ -11,7 +11,6 @@ interface IStackupProvider {
   client: Client;
   signer: ethers.Signer;
   simpleAccount: SimpleAccount;
-  provider: ethers.providers.JsonRpcProvider;
 }
 
 const StackupContext = React.createContext<IStackupProvider>({
@@ -19,11 +18,9 @@ const StackupContext = React.createContext<IStackupProvider>({
   signer: {} as ethers.Signer,
   simpleAccount: {} as SimpleAccount,
   address: ethers.constants.AddressZero,
-  provider: {} as ethers.providers.JsonRpcProvider,
 });
 
 export const useStackup = () => React.useContext<IStackupProvider>(StackupContext);
-export const useProvider = () => useStackup().provider;
 
 export const FLAT_FEE_RECIPIENT = ethers.utils.getAddress(process.env.REACT_APP_FLAT_FEE_RECIPIENT!);
 
@@ -45,7 +42,6 @@ const config = {
 
 interface StackupProviderProps {
   signer: ethers.Signer;
-  provider: ethers.providers.JsonRpcProvider;
 }
 
 export const VERIFYING_PAYMASTER_ECO = Presets.Middleware.verifyingPaymaster(
@@ -67,11 +63,7 @@ export const getSimpleAccount = (signer: ethers.Signer, paymaster?: UserOperatio
   );
 };
 
-export const StackupProvider: React.FC<React.PropsWithChildren<StackupProviderProps>> = ({
-  signer,
-  provider,
-  children,
-}) => {
+export const StackupProvider: React.FC<React.PropsWithChildren<StackupProviderProps>> = ({ signer, children }) => {
   const [client, setClient] = useState<Client>();
   const [simpleAccount, setSimpleAccount] = useState<SimpleAccount>();
 
@@ -109,7 +101,6 @@ export const StackupProvider: React.FC<React.PropsWithChildren<StackupProviderPr
         signer,
         client,
         address,
-        provider,
         simpleAccount,
       }}
     >

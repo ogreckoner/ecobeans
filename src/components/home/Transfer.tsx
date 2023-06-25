@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ethers } from "ethers";
+import { BigNumber, ethers } from "ethers";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ScanOutlined, SendOutlined } from "@ant-design/icons";
 import { Alert, Button, FloatButton, Input, InputProps, Space, Typography } from "antd";
 
 import { useAlert } from "@hooks/useAlert";
 import { useFunTokenTransfer } from "@hooks/useFunTokenTransfer";
-import { FeeOperation, useOperationFee } from "@hooks/useOperationFee";
-import { useStackup } from "@contexts/StackupContext";
+import { FeeOperation, FLAT_FEE_AMOUNT, useOperationFee } from "@hooks/useOperationFee";
 import { blockExplorerLink, convertAmount, formatTokenAmount } from "@helpers";
 
 // Components
@@ -17,7 +16,7 @@ import { TokenIcon } from "@components/token";
 import { TokenFee } from "@components/commons/TokenFee";
 import { AddressInput } from "@components/AddressInput";
 import { useCurrentToken } from "@components/home/context/TokenContext";
-import { getTokenInfo, NETWORK, NETWORKS } from "@constants";
+import { getNetwork, getTokenInfo } from "@constants";
 
 function getTotal(amount: string, decimals: number) {
   try {
@@ -28,15 +27,73 @@ function getTotal(amount: string, decimals: number) {
 }
 
 let scanner: (show: boolean) => void;
-const baseChainId = NETWORK.name.includes("goerli") ? NETWORKS["base-goerli"].chainId : NETWORKS["base"].chainId;
+
+function calculateTransferAmounts(total: BigNumber, fee: BigNumber, balances: BigNumber[]): BigNumber[] {
+  let diff = total;
+  let amounts = balances.map(amount => {
+    let transferAmount: BigNumber;
+    if (diff.isZero()) {
+      transferAmount = ethers.constants.Zero;
+    } else if (amount.gte(diff)) {
+      transferAmount = diff;
+      diff = ethers.constants.Zero;
+    } else {
+      transferAmount = amount;
+      diff = diff.sub(amount);
+    }
+    return transferAmount;
+  });
+
+  const transfersCount = amounts.filter(amount => !amount.isZero()).length;
+  if (!transfersCount) return amounts;
+
+  const feePerTransfer = fee.div(transfersCount);
+
+  let invalidBalance = -1;
+  let missingBalance = ethers.constants.Zero;
+
+  amounts = amounts.map((amount, index) => {
+    const balance = balances[index];
+    if (amount.isZero()) return amount;
+    if (balance.lte(fee)) {
+      invalidBalance = index;
+      return ethers.constants.Zero;
+    }
+    const transferAmount = amount.add(feePerTransfer).add(missingBalance);
+    if (balance.lt(transferAmount)) {
+      missingBalance = transferAmount.sub(balance);
+      return balance.sub(feePerTransfer);
+    }
+    missingBalance = ethers.constants.Zero;
+    return transferAmount;
+  });
+
+  if (invalidBalance >= 0) {
+    balances = [...balances];
+    balances[invalidBalance] = ethers.constants.Zero;
+    return calculateTransferAmounts(total, fee, balances);
+  }
+
+  if (!missingBalance.isZero()) throw new Error("Not enough balance");
+
+  return amounts;
+}
+
+type TransactionResult =
+  | {
+      hash: string;
+      amount: BigNumber;
+      error?: false;
+    }
+  | { error: true };
 
 export const Transfer: React.FC = () => {
   const navigate = useNavigate();
-  const { provider } = useStackup();
-  const { token: tokenId, balance } = useCurrentToken();
-  const { transfer: transferOptimism } = useFunTokenTransfer(tokenId);
-  const { transfer: transferBase } = useFunTokenTransfer(tokenId, baseChainId);
+  const { token: tokenId, balance, optimismBalance, baseBalance } = useCurrentToken();
   const token = getTokenInfo(tokenId);
+
+  const { transfer: transferBase } = useFunTokenTransfer(tokenId, "base");
+  const { transfer: transferOptimism } = useFunTokenTransfer(tokenId, "optimism");
 
   const { data: fee } = useOperationFee(tokenId, FeeOperation.Transfer);
 
@@ -56,38 +113,70 @@ export const Transfer: React.FC = () => {
   }, [navigate, searchParams]);
 
   const doSend = async () => {
-    if (!fee) return;
+    if (!fee || !optimismBalance || !baseBalance) return;
     setLoading(true);
     alertApi.clear();
     const value = convertAmount(amount, token.decimals);
     try {
-      const txHash = await transferOptimism(toAddress, value);
-      const txHash2 = await transferBase(toAddress, value);
+      const transferAmounts = calculateTransferAmounts(value, FLAT_FEE_AMOUNT, [optimismBalance, baseBalance]);
+      console.log("transferAmounts", ...transferAmounts);
+      const [optimismTransferAmount, baseTransferAmount] = transferAmounts;
 
-      console.log({ txHash, txHash2 });
+      let opTx: TransactionResult = { error: true };
+      let baseTx: TransactionResult = { error: true };
+      let transferred = ethers.constants.Zero;
 
-      alertApi.success({
-        message: "Transfer Executed!",
+      const transferringOnBothChains = !transferAmounts.some(amount => amount.isZero());
+
+      const fee = transferringOnBothChains ? FLAT_FEE_AMOUNT.div(2) : FLAT_FEE_AMOUNT;
+
+      if (!optimismTransferAmount.isZero()) {
+        try {
+          const opTxHash = await transferOptimism(toAddress, optimismTransferAmount, fee);
+          transferred = transferred.add(optimismTransferAmount);
+          opTx = { hash: opTxHash, amount: optimismTransferAmount };
+        } catch (e) {
+          console.error("optimism-transfer-failed", e);
+        }
+      }
+      if (!baseTransferAmount.isZero()) {
+        try {
+          const baseTxHash = await transferBase(toAddress, baseTransferAmount, fee);
+          transferred = transferred.add(baseTransferAmount);
+          baseTx = { hash: baseTxHash, amount: baseTransferAmount };
+        } catch (e) {
+          console.error("base-transfer-failed", e);
+        }
+      }
+
+      if (opTx.error && baseTx.error) {
+        alertApi.error({ message: "Transfer failed" });
+        return;
+      }
+
+      const hasAnError = !transferred.eq(value);
+
+      alertApi.show({
+        type: hasAnError ? "warning" : "success",
+        message: hasAnError ? "Partial Transfer Executed" : "Transfer Executed!",
         description: (
           <>
             You have sent{" "}
             <b>
-              {formatTokenAmount(ethers.utils.formatUnits(value, token.decimals), 3)} {token.name}
+              {formatTokenAmount(ethers.utils.formatUnits(transferred, token.decimals), 2)} {token.name}
             </b>{" "}
-            tokens to <Address provider={provider} address={toAddress} style={{ fontWeight: "bold" }} />.<br />
-            <Typography.Link href={blockExplorerLink(txHash)} target="_blank">
-              See Optimism transaction.
-            </Typography.Link>
-            <br />
-            <Typography.Link
-              href={blockExplorerLink(
-                txHash2,
-                NETWORK.name.includes("goerli") ? NETWORKS["base-goerli"] : NETWORKS.base,
-              )}
-              target="_blank"
-            >
-              See Base transaction.
-            </Typography.Link>
+            tokens to <Address address={toAddress} style={{ fontWeight: "bold" }} />.<br />
+            {!opTx.error ? (
+              <Typography.Link href={blockExplorerLink(opTx.hash)} target="_blank">
+                See Optimism transaction
+              </Typography.Link>
+            ) : null}
+            {!hasAnError ? <br /> : null}
+            {!baseTx.error ? (
+              <Typography.Link href={blockExplorerLink(baseTx.hash, getNetwork("base"))} target="_blank">
+                See Base transaction
+              </Typography.Link>
+            ) : null}
           </>
         ),
       });

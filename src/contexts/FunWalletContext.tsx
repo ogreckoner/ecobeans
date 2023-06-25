@@ -9,19 +9,16 @@ interface IFunWalletProvider {
   address: string;
   wallet: FunSimpleAccount;
   signer: ethers.Wallet;
-  provider: ethers.providers.JsonRpcProvider;
 }
 
 const FunWalletContext = React.createContext<IFunWalletProvider>({
   address: "0x0000000000000000000000000000000000000000",
   wallet: {} as FunSimpleAccount,
   signer: {} as ethers.Wallet,
-  provider: {} as ethers.providers.JsonRpcProvider,
 });
 
 interface FunWalletProviderProps {
   signer: ethers.Wallet;
-  provider: ethers.providers.JsonRpcProvider;
 }
 
 export const getSimpleAccount = (
@@ -40,11 +37,7 @@ export const getSimpleAccount = (
 
 export const useFunWallet = () => useContext(FunWalletContext);
 
-export const FunWalletProvider: React.FC<React.PropsWithChildren<FunWalletProviderProps>> = ({
-  children,
-  provider,
-  signer,
-}) => {
+export const FunWalletProvider: React.FC<React.PropsWithChildren<FunWalletProviderProps>> = ({ children, signer }) => {
   const [wallet, setWallet] = useState<FunSimpleAccount | undefined>();
   const [address, setAddress] = useState<string | undefined>();
 
@@ -68,7 +61,6 @@ export const FunWalletProvider: React.FC<React.PropsWithChildren<FunWalletProvid
         address,
         wallet,
         signer,
-        provider,
       }}
     >
       {children}

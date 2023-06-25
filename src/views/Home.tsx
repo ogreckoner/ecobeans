@@ -39,13 +39,17 @@ const TokenBalance: React.FC<{ decimals: number; balance?: ethers.BigNumber; ico
 export const Home: React.FC<HomeProps> = ({ token }) => {
   const navigate = useNavigate();
   const { address } = useFunWallet();
-  const { balance } = useBalance(token, address);
+
+  const { balance: baseBalance } = useBalance(token, address, "base");
+  const { balance: optimismBalance } = useBalance(token, address, "optimism");
+
   const { decimals } = getTokenInfo(token);
 
+  const balance = baseBalance && optimismBalance && baseBalance.add(optimismBalance);
   const changeToken = (token: Token) => navigate(`/t/${token}`, { state: { redirect: true } });
 
   return (
-    <TokenContext.Provider value={{ token, balance }}>
+    <TokenContext.Provider value={{ token, balance, optimismBalance, baseBalance }}>
       <Space direction="vertical" align="center" size="large" style={{ width: "100%" }}>
         <Segmented
           value={token}

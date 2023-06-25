@@ -12,7 +12,6 @@ import { WalletExport } from "@components/menu/WalletExport";
 
 interface AccountProps {
   signer: ethers.Wallet;
-  provider: ethers.providers.JsonRpcProvider;
 }
 
 enum Action {
@@ -21,7 +20,7 @@ enum Action {
   Export,
 }
 
-export const Account: React.FC<AccountProps> = ({ signer, provider }) => {
+export const Account: React.FC<AccountProps> = ({ signer }) => {
   const [open, setOpen] = useState(false);
 
   const [action, setAction] = useState<Action | null>(null);
@@ -82,7 +81,7 @@ export const Account: React.FC<AccountProps> = ({ signer, provider }) => {
             </Button>
           ) : null
         }
-        title={address ? <Address copyable address={address} provider={provider} /> : <Spin />}
+        title={address ? <Address copyable address={address} /> : <Spin />}
       >
         {action === Action.Import ? (
           <WalletImport onClose={() => setAction(null)} />

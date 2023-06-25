@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import { useBurnerSigner } from "eth-hooks";
+import { useState, useEffect } from "react";
+import { useBurnerSigner } from "./useBurnerSigner";
 
-export const useBurnerWallet = (provider?: ethers.providers.JsonRpcProvider): ethers.Wallet | undefined => {
-  const { signer: burnerSigner, loadOrGenerateBurner } = useBurnerSigner(provider);
+export const useBurnerWallet = (): ethers.Wallet | undefined => {
+  const { signer: burnerSigner, loadOrGenerateBurner } = useBurnerSigner();
 
   const [signer, setSigner] = useState<ethers.Wallet>();
 
   useEffect(() => {
-    if (!signer && provider) loadOrGenerateBurner();
-  }, [loadOrGenerateBurner, provider, signer]);
+    if (!signer) loadOrGenerateBurner();
+  }, [loadOrGenerateBurner, signer]);
 
   useEffect(() => {
     const getSigner = () => {
