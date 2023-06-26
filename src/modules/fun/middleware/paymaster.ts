@@ -13,14 +13,11 @@ export const flatVerifyingPaymaster =
   (
     provider: ethers.providers.JsonRpcProvider,
     paymasterAddress: string,
-    options: { simulate?: boolean; fee?: ethers.BigNumber } = {},
+    options: { fee?: ethers.BigNumber } = {},
   ): UserOperationMiddlewareFn =>
   async ctx => {
-    const { simulate = false, fee = FLAT_FEE_AMOUNT } = options;
-
-    if (simulate) {
-      ctx.op.verificationGasLimit = ethers.BigNumber.from(ctx.op.verificationGasLimit).mul(3);
-    }
+    const { fee = FLAT_FEE_AMOUNT } = options;
+    ctx.op.verificationGasLimit = ethers.BigNumber.from(ctx.op.verificationGasLimit).mul(3);
 
     const paymaster = FlatVerifyingPaymaster__factory.connect(paymasterAddress, provider);
 
@@ -40,7 +37,7 @@ export const flatVerifyingPaymaster =
       validUntil,
       validAfter,
       token.address,
-      FLAT_FEE_AMOUNT,
+      fee,
     );
 
     const signature = await signingWallet.signMessage(ethers.utils.arrayify(hash));

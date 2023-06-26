@@ -48,7 +48,7 @@ export class FunSimpleAccount extends FunWallet {
     simpleAccount
       .resetMiddleware()
       .useMiddleware(_simpleAccount.resolveAccount)
-      .useMiddleware(flatVerifyingPaymaster(provider, paymasterAddress, { fee, simulate: true }))
+      .useMiddleware(flatVerifyingPaymaster(provider, paymasterAddress, { fee }))
       .useMiddleware(estimateUserOperationGas(provider))
       .useMiddleware(flatVerifyingPaymaster(provider, paymasterAddress, { fee }))
       .useMiddleware(EOASignature(_simpleAccount.signer));
