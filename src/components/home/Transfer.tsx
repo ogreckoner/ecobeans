@@ -28,33 +28,42 @@ function getTotal(amount: string, decimals: number) {
 
 let scanner: (show: boolean) => void;
 
-function getTransferAmount(amount: BigNumber, fee: BigNumber, balance: BigNumber) {
+type TransferAmount = { amount: BigNumber; fee: BigNumber };
+
+function getTransferAmount(
+  amount: BigNumber,
+  fee: BigNumber,
+  balance: BigNumber,
+): TransferAmount & { remaining: TransferAmount } {
   const total = amount.add(fee);
-  if (balance.lte(fee)) {
-    return { amount: ethers.constants.Zero, fee: ethers.constants.Zero, remaining: amount };
+  if (amount.isZero()) {
+    return { amount: ethers.constants.Zero, fee: ethers.constants.Zero, remaining: { fee, amount } };
+  } else if (balance.lte(fee)) {
+    return { amount: balance, fee: ethers.constants.Zero, remaining: { fee, amount: amount.sub(balance) } };
   } else if (balance.lte(total)) {
-    return { amount: balance.sub(fee), fee: fee, remaining: total.sub(balance) };
+    return {
+      fee: fee,
+      amount: balance.sub(fee),
+      remaining: { fee: ethers.constants.Zero, amount: total.sub(balance) },
+    };
   }
-  return { amount, fee, remaining: ethers.constants.Zero };
+  return { amount, fee, remaining: { fee: ethers.constants.Zero, amount: ethers.constants.Zero } };
 }
 
-function calculateTransferAmounts(total: BigNumber, fee: BigNumber, balances: BigNumber[]) {
-  for (let e = 1; e <= balances.length; e++) {
-    const amounts = balances.map(() => ethers.constants.Zero);
-    const feePerChain = fee.div(e);
-    let remaining = total;
+function calculateTransferAmounts(total: BigNumber, fee: BigNumber, balances: BigNumber[]): TransferAmount[] {
+  const transfers = [];
+  let remainingData = { amount: total, fee: fee };
 
-    let i = 0;
-    do {
-      const data = getTransferAmount(remaining, feePerChain, balances[i]);
-      remaining = data.remaining;
-      amounts[i] = data.amount;
-      i++;
-    } while (i < balances.length && i < e && !remaining.isZero());
-
-    if (remaining.isZero()) return { amounts, feePerChain };
+  for (let i = 0; i < balances.length; i++) {
+    const { amount, fee, remaining } = getTransferAmount(remainingData.amount, remainingData.fee, balances[i]);
+    remainingData = remaining;
+    transfers.push({ amount, fee });
   }
-  throw new Error("Exceed balance");
+
+  const remainingTotal = remainingData.amount.add(remainingData.fee);
+  if (!remainingTotal.isZero()) throw new Error("Exceed balance");
+
+  return transfers;
 }
 
 type TransactionResult =
@@ -97,30 +106,27 @@ export const Transfer: React.FC = () => {
     alertApi.clear();
     const value = convertAmount(amount, token.decimals);
     try {
-      const { amounts: transferAmounts, feePerChain } = calculateTransferAmounts(value, fee, [
-        optimismBalance,
-        baseBalance,
-      ]);
-      const [optimismTransferAmount, baseTransferAmount] = transferAmounts;
+      const transferAmounts = calculateTransferAmounts(value, fee, [optimismBalance, baseBalance]);
+      const [optimismTransferData, baseTransferData] = transferAmounts;
 
       let opTx: TransactionResult = { error: true };
       let baseTx: TransactionResult = { error: true };
       let transferred = ethers.constants.Zero;
 
-      if (!optimismTransferAmount.isZero()) {
+      if (!optimismTransferData.amount.isZero()) {
         try {
-          const opTxHash = await transferOptimism(toAddress, optimismTransferAmount, feePerChain);
-          transferred = transferred.add(optimismTransferAmount);
-          opTx = { hash: opTxHash, amount: optimismTransferAmount };
+          const opTxHash = await transferOptimism(toAddress, optimismTransferData.amount, optimismTransferData.fee);
+          transferred = transferred.add(optimismTransferData.amount);
+          opTx = { hash: opTxHash, amount: optimismTransferData.amount };
         } catch (e) {
           console.error("optimism-transfer-failed", e);
         }
       }
-      if (!baseTransferAmount.isZero()) {
+      if (!baseTransferData.amount.isZero()) {
         try {
-          const baseTxHash = await transferBase(toAddress, baseTransferAmount, feePerChain);
-          transferred = transferred.add(baseTransferAmount);
-          baseTx = { hash: baseTxHash, amount: baseTransferAmount };
+          const baseTxHash = await transferBase(toAddress, baseTransferData.amount, baseTransferData.fee);
+          transferred = transferred.add(baseTransferData.amount);
+          baseTx = { hash: baseTxHash, amount: baseTransferData.amount };
         } catch (e) {
           console.error("base-transfer-failed", e);
         }
