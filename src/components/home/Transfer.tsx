@@ -7,7 +7,7 @@ import { Alert, Button, FloatButton, Input, InputProps, Space, Typography } from
 
 import { useAlert } from "@hooks/useAlert";
 import { useFunTokenTransfer } from "@hooks/useFunTokenTransfer";
-import { FeeOperation, FLAT_FEE_AMOUNT, useOperationFee } from "@hooks/useOperationFee";
+import { FeeOperation, useOperationFee } from "@hooks/useOperationFee";
 import { blockExplorerLink, convertAmount, formatTokenAmount } from "@helpers";
 
 // Components
@@ -66,18 +66,19 @@ type TransactionResult =
   | { error: true };
 
 export const Transfer: React.FC = () => {
-  const navigate = useNavigate();
   const { token: tokenId, balance, optimismBalance, baseBalance } = useCurrentToken();
+
+  const navigate = useNavigate();
   const token = getTokenInfo(tokenId);
-
-  const { transfer: transferBase } = useFunTokenTransfer(tokenId, "base");
-  const { transfer: transferOptimism } = useFunTokenTransfer(tokenId, "optimism");
-
-  const { data: fee } = useOperationFee(tokenId, FeeOperation.Transfer);
 
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
   const [toAddress, setToAddress] = useState("");
+
+  const { data: fee } = useOperationFee(tokenId, FeeOperation.Transfer);
+
+  const { transfer: transferBase } = useFunTokenTransfer(tokenId, "base");
+  const { transfer: transferOptimism } = useFunTokenTransfer(tokenId, "optimism");
 
   const [alertApi, alertElem] = useAlert({ className: "transfer-alert" });
 
