@@ -96,7 +96,7 @@ export const Transfer: React.FC = () => {
     alertApi.clear();
     const value = convertAmount(amount, token.decimals);
     try {
-      const { amounts: transferAmounts, feePerChain } = calculateTransferAmounts(value, FLAT_FEE_AMOUNT, [
+      const { amounts: transferAmounts, feePerChain } = calculateTransferAmounts(value, fee, [
         optimismBalance,
         baseBalance,
       ]);
