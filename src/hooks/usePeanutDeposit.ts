@@ -8,9 +8,12 @@ import { ENTRY_POINT_ADDRESS, ExecutionResult, getTokenInfo, Token, VERIFYING_PA
 import { PEANUT_V3_ADDRESS } from "@modules/peanut/constants";
 import { EntryPoint__factory } from "userop/dist/typechain";
 import { hasWalletBeenDeployed } from "@helpers/contracts";
+import { OPTIMISM_PROVIDER } from "@modules/blockchain/providers";
+
+const provider = OPTIMISM_PROVIDER;
 
 export const usePeanutDeposit = () => {
-  const { address, provider, simpleAccount, client } = useStackup();
+  const { address, simpleAccount, client } = useStackup();
 
   const buildOps = useCallback(
     async (tokenId: Token, value: ethers.BigNumber, fee: ethers.BigNumber, password?: string) => {

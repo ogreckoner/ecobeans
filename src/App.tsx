@@ -1,36 +1,27 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { Navigate, Route } from "react-router-dom";
 
-import { NETWORK, Token } from "@constants";
+import { Token } from "@constants";
+import { useBurnerWallet } from "@hooks";
 import { About, Claim, Home } from "@views";
 import { Account, Footer, Header } from "@components";
-import { useBurnerWallet, useStaticJsonRPC } from "@hooks";
-import { StackupProvider } from "@contexts/StackupContext";
+import { FunWalletProvider } from "@contexts/FunWalletContext";
 import { FadeTransitionRoutes } from "@components/routes/FadeTransitionRoutes";
 
 import "./App.css";
 import "antd/dist/reset.css";
 
 function App() {
-  const provider = useStaticJsonRPC(NETWORK.rpcUrl, NETWORK.chainId);
-  const signer = useBurnerWallet(provider);
-
-  const tokenRoutes = useMemo(
-    () =>
-      [Token.ECO, Token.USDC].map(token => (
-        <Route key={`${token}-home`} path={`/t/${token}`} element={<Home token={token} />} />
-      )),
-    [],
-  );
-
-  if (!provider || !signer) return null;
+  const signer = useBurnerWallet();
+  if (!signer) return null;
 
   const routes = (
     <FadeTransitionRoutes>
-      {tokenRoutes}
+      <Route path="/t/eco" element={<Home token={Token.ECO} />} />
+      <Route path="/t/usdc" element={<Home token={Token.USDC} />} />
 
       {/*--- Redirect Existing Links to new claim route ---*/}
-      <Route path="/claim" element={<Claim provider={provider} />} />
+      <Route path="/claim" element={<Claim />} />
 
       <Route path="/about" element={<About />} />
       <Route path="*" element={<Navigate to="/t/eco" state={{ redirect: true }} />} />
@@ -39,13 +30,13 @@ function App() {
 
   return (
     <div className="App">
-      <StackupProvider provider={provider} signer={signer}>
+      <FunWalletProvider signer={signer}>
         <Header>
-          <Account provider={provider} signer={signer} />
+          <Account signer={signer} />
         </Header>
         {routes}
         <Footer />
-      </StackupProvider>
+      </FunWalletProvider>
     </div>
   );
 }

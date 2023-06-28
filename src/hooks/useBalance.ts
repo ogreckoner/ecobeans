@@ -1,14 +1,17 @@
 import { useMemo } from "react";
-import { useContractReader } from "eth-hooks";
 import { BigNumber } from "ethers";
+import { useContractReader } from "eth-hooks";
 
-import { useProvider } from "@contexts/StackupContext";
 import { ERC20__factory } from "@assets/contracts";
-import { getTokenInfo, Token } from "@constants";
+import { getTokenInfo, Network, Token } from "@constants";
+import { getNetworkProvider } from "@modules/blockchain/providers";
 
-export const useBalance = (token: Token, address: string) => {
-  const provider = useProvider();
-  const tokenContract = useMemo(() => ERC20__factory.connect(getTokenInfo(token).address, provider), [token, provider]);
+export const useBalance = (token: Token, address: string, network: Network = "optimism") => {
+  const tokenContract = useMemo(() => {
+    const provider = getNetworkProvider(network);
+    return ERC20__factory.connect(getTokenInfo(token, network).address, provider);
+  }, [token, network]);
+
   const [balance, , status] = useContractReader(
     tokenContract,
     tokenContract.balanceOf,
@@ -16,5 +19,6 @@ export const useBalance = (token: Token, address: string) => {
     {},
     { blockNumberInterval: 1 },
   );
-  return { balance: balance as BigNumber, status };
+
+  return { balance: balance as BigNumber | undefined, status };
 };

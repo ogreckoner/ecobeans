@@ -11,7 +11,7 @@ import { TokenContext } from "@components/home/context/TokenContext";
 import { getTokenInfo, Token } from "@constants";
 import { formatTokenAmount } from "@helpers";
 import { useBalance } from "@hooks/useBalance";
-import { useStackup } from "@contexts/StackupContext";
+import { useFunWallet } from "@contexts/FunWalletContext";
 
 interface HomeProps {
   token: Token;
@@ -38,14 +38,18 @@ const TokenBalance: React.FC<{ decimals: number; balance?: ethers.BigNumber; ico
 
 export const Home: React.FC<HomeProps> = ({ token }) => {
   const navigate = useNavigate();
-  const { address } = useStackup();
-  const { balance } = useBalance(token, address);
+  const { address } = useFunWallet();
+
+  const { balance: baseBalance } = useBalance(token, address, "base");
+  const { balance: optimismBalance } = useBalance(token, address, "optimism");
+
   const { decimals } = getTokenInfo(token);
 
+  const balance = baseBalance && optimismBalance && baseBalance.add(optimismBalance);
   const changeToken = (token: Token) => navigate(`/t/${token}`, { state: { redirect: true } });
 
   return (
-    <TokenContext.Provider value={{ token, balance }}>
+    <TokenContext.Provider value={{ token, balance, optimismBalance, baseBalance }}>
       <Space direction="vertical" align="center" size="large" style={{ width: "100%" }}>
         <Segmented
           value={token}

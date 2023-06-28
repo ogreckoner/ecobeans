@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ethers } from "ethers";
+import { BigNumber, ethers } from "ethers";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ScanOutlined, SendOutlined } from "@ant-design/icons";
 import { Alert, Button, FloatButton, Input, InputProps, Space, Typography } from "antd";
 
 import { useAlert } from "@hooks/useAlert";
-import { useTokenTransfer } from "@hooks/useTokenTransfer";
+import { useFunTokenTransfer } from "@hooks/useFunTokenTransfer";
 import { FeeOperation, useOperationFee } from "@hooks/useOperationFee";
-import { useStackup } from "@contexts/StackupContext";
 import { blockExplorerLink, convertAmount, formatTokenAmount } from "@helpers";
 
 // Components
@@ -17,7 +16,7 @@ import { TokenIcon } from "@components/token";
 import { TokenFee } from "@components/commons/TokenFee";
 import { AddressInput } from "@components/AddressInput";
 import { useCurrentToken } from "@components/home/context/TokenContext";
-import { getTokenInfo } from "@constants";
+import { getNetwork, getTokenInfo } from "@constants";
 
 function getTotal(amount: string, decimals: number) {
   try {
@@ -29,18 +28,66 @@ function getTotal(amount: string, decimals: number) {
 
 let scanner: (show: boolean) => void;
 
-export const Transfer: React.FC = () => {
-  const navigate = useNavigate();
-  const { provider } = useStackup();
-  const { token: tokenId, balance } = useCurrentToken();
-  const { transfer } = useTokenTransfer(tokenId);
-  const token = getTokenInfo(tokenId);
+type TransferAmount = { amount: BigNumber; fee: BigNumber };
 
-  const { data: fee } = useOperationFee(tokenId, FeeOperation.Transfer);
+function getTransferAmount(
+  amount: BigNumber,
+  fee: BigNumber,
+  balance: BigNumber,
+): TransferAmount & { remaining: TransferAmount } {
+  const total = amount.add(fee);
+  if (amount.isZero()) {
+    return { amount: ethers.constants.Zero, fee: ethers.constants.Zero, remaining: { fee, amount } };
+  } else if (balance.lte(fee)) {
+    return { amount: balance, fee: ethers.constants.Zero, remaining: { fee, amount: amount.sub(balance) } };
+  } else if (balance.lte(total)) {
+    return {
+      fee: fee,
+      amount: balance.sub(fee),
+      remaining: { fee: ethers.constants.Zero, amount: total.sub(balance) },
+    };
+  }
+  return { amount, fee, remaining: { fee: ethers.constants.Zero, amount: ethers.constants.Zero } };
+}
+
+function calculateTransferAmounts(total: BigNumber, fee: BigNumber, balances: BigNumber[]): TransferAmount[] {
+  const transfers = [];
+  let remainingData = { amount: total, fee: fee };
+
+  for (let i = 0; i < balances.length; i++) {
+    const { amount, fee, remaining } = getTransferAmount(remainingData.amount, remainingData.fee, balances[i]);
+    remainingData = remaining;
+    transfers.push({ amount, fee });
+  }
+
+  const remainingTotal = remainingData.amount.add(remainingData.fee);
+  if (!remainingTotal.isZero()) throw new Error("Exceed balance");
+
+  return transfers;
+}
+
+type TransactionResult =
+  | {
+      hash: string;
+      amount: BigNumber;
+      error?: false;
+    }
+  | { error: true };
+
+export const Transfer: React.FC = () => {
+  const { token: tokenId, balance, optimismBalance, baseBalance } = useCurrentToken();
+
+  const navigate = useNavigate();
+  const token = getTokenInfo(tokenId);
 
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
   const [toAddress, setToAddress] = useState("");
+
+  const { data: fee } = useOperationFee(tokenId, FeeOperation.Transfer);
+
+  const { transfer: transferBase } = useFunTokenTransfer(tokenId, "base");
+  const { transfer: transferOptimism } = useFunTokenTransfer(tokenId, "optimism");
 
   const [alertApi, alertElem] = useAlert({ className: "transfer-alert" });
 
@@ -54,25 +101,65 @@ export const Transfer: React.FC = () => {
   }, [navigate, searchParams]);
 
   const doSend = async () => {
-    if (!fee) return;
+    if (!fee || !optimismBalance || !baseBalance) return;
     setLoading(true);
     alertApi.clear();
     const value = convertAmount(amount, token.decimals);
     try {
-      const txHash = await transfer(toAddress, value, fee);
+      const transferAmounts = calculateTransferAmounts(value, fee, [optimismBalance, baseBalance]);
+      const [optimismTransferData, baseTransferData] = transferAmounts;
 
-      alertApi.success({
-        message: "Transfer Executed!",
+      let opTx: TransactionResult = { error: true };
+      let baseTx: TransactionResult = { error: true };
+      let transferred = ethers.constants.Zero;
+
+      if (!optimismTransferData.amount.isZero()) {
+        try {
+          const opTxHash = await transferOptimism(toAddress, optimismTransferData.amount, optimismTransferData.fee);
+          transferred = transferred.add(optimismTransferData.amount);
+          opTx = { hash: opTxHash, amount: optimismTransferData.amount };
+        } catch (e) {
+          console.error("optimism-transfer-failed", e);
+        }
+      }
+      if (!baseTransferData.amount.isZero()) {
+        try {
+          const baseTxHash = await transferBase(toAddress, baseTransferData.amount, baseTransferData.fee);
+          transferred = transferred.add(baseTransferData.amount);
+          baseTx = { hash: baseTxHash, amount: baseTransferData.amount };
+        } catch (e) {
+          console.error("base-transfer-failed", e);
+        }
+      }
+
+      if (opTx.error && baseTx.error) {
+        alertApi.error({ message: "Transfer failed" });
+        return;
+      }
+
+      const hasAnError = !transferred.eq(value);
+
+      alertApi.show({
+        type: hasAnError ? "warning" : "success",
+        message: hasAnError ? "Partial Transfer Executed" : "Transfer Executed!",
         description: (
           <>
             You have sent{" "}
             <b>
-              {formatTokenAmount(ethers.utils.formatUnits(value, token.decimals), 3)} {token.name}
+              {formatTokenAmount(ethers.utils.formatUnits(transferred, token.decimals), 2)} {token.name}
             </b>{" "}
-            tokens to <Address provider={provider} address={toAddress} style={{ fontWeight: "bold" }} />.<br />
-            <Typography.Link href={blockExplorerLink(txHash)} target="_blank">
-              See transaction.
-            </Typography.Link>
+            tokens to <Address address={toAddress} style={{ fontWeight: "bold" }} />.<br />
+            {!opTx.error ? (
+              <Typography.Link href={blockExplorerLink(opTx.hash)} target="_blank">
+                See Optimism transaction
+              </Typography.Link>
+            ) : null}
+            {!hasAnError ? <br /> : null}
+            {!baseTx.error ? (
+              <Typography.Link href={blockExplorerLink(baseTx.hash, getNetwork("base"))} target="_blank">
+                See Base transaction
+              </Typography.Link>
+            ) : null}
           </>
         ),
       });
@@ -90,6 +177,10 @@ export const Transfer: React.FC = () => {
 
   const handleKey: InputProps["onKeyUp"] = event => {
     if (event.key === "Enter") doSend();
+  };
+
+  const setMaxAmount = () => {
+    if (balance && fee) setAmount(ethers.utils.formatUnits(balance.sub(fee)));
   };
 
   const total = getTotal(amount, token.decimals);
@@ -118,6 +209,11 @@ export const Transfer: React.FC = () => {
           style={{ width: 320 }}
           onChange={e => setAmount(e.target.value)}
           prefix={<TokenIcon token={tokenId} style={{ width: 20, height: 20 }} />}
+          suffix={
+            <Button type="default" size="small" onClick={setMaxAmount}>
+              Max
+            </Button>
+          }
         />
         <TokenFee token={tokenId} fee={fee} />
         {exceedsBalance && amount && !loading ? (

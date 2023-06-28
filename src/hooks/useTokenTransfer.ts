@@ -1,12 +1,15 @@
 import { ethers } from "ethers";
 
-import { FLAT_FEE_RECIPIENT, useStackup } from "@contexts/StackupContext";
-import { hasWalletBeenDeployed } from "@helpers/contracts";
 import { ERC20__factory } from "@assets/contracts";
+import { hasWalletBeenDeployed } from "@helpers/contracts";
+import { OPTIMISM_PROVIDER } from "@modules/blockchain/providers";
+import { FLAT_FEE_RECIPIENT, useStackup } from "@contexts/StackupContext";
 import { getTokenInfo, Token, VERIFYING_PAYMASTER_ADDRESS } from "@constants";
 
+const provider = OPTIMISM_PROVIDER;
+
 export const useTokenTransfer = (tokenId: Token) => {
-  const { provider, simpleAccount, client } = useStackup();
+  const { simpleAccount, client } = useStackup();
 
   const buildOps = async (to: string, amount: ethers.BigNumber, fee: ethers.BigNumber) => {
     if (!simpleAccount) return;

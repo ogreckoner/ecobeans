@@ -1,23 +1,22 @@
 import React from "react";
-import { ethers } from "ethers";
 import { Skeleton, Typography } from "antd";
 import { LinkProps } from "antd/es/typography/Link";
 import { useResolveEnsAddress } from "eth-hooks/dapps";
 
 import { blockExplorerLink } from "@helpers";
+import { MAINNET_PROVIDER } from "@modules/blockchain/providers";
 
 const { Link } = Typography;
 
 interface AddressProps extends LinkProps {
   address: string;
-  provider: ethers.providers.JsonRpcProvider;
   copyable?: boolean;
 
   size?: "normal" | "long";
 }
 
-export const Address: React.FC<AddressProps> = ({ address, provider, size, copyable, ...props }) => {
-  const [ens] = useResolveEnsAddress(provider, address);
+export const Address: React.FC<AddressProps> = ({ address, size, copyable, ...props }) => {
+  const [ens] = useResolveEnsAddress(MAINNET_PROVIDER, address);
 
   const ensSplit = ens && ens.split(".");
   const validEnsCheck = ensSplit && ensSplit[ensSplit.length - 1] === "eth";
