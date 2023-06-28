@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { ethers } from "ethers";
 
-import { hasWalletBeenDeployed } from "@helpers";
 import { ERC20__factory } from "@assets/contracts";
 import { getTokenInfo, Network, Token } from "@constants";
 
@@ -27,7 +26,6 @@ export const useFunTokenTransfer = (tokenId: Token, network: Network | number = 
       : FLAT_VERIFYING_PAYMASTER_ADDRESS_OPTIMISM;
 
     const simpleAccount = await getSimpleAccount(signer, provider);
-    const hasBeenDeployed = await hasWalletBeenDeployed(provider, address);
 
     const erc20 = ERC20__factory.connect(token.address, provider);
     const data = erc20.interface.encodeFunctionData("transfer", [to, amount]);
@@ -35,7 +33,7 @@ export const useFunTokenTransfer = (tokenId: Token, network: Network | number = 
     const allowance = await erc20.allowance(address, paymasterAddress);
     const hasEnoughAllowance = allowance.gte(ethers.utils.parseUnits("1000", token.decimals));
 
-    if (hasBeenDeployed && hasEnoughAllowance) {
+    if (hasEnoughAllowance) {
       simpleAccount.execute(erc20.address, 0, data);
     } else {
       // Execute transaction and approve Paymaster to spend tokens to pay gas fees in ECO tokens

@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { ethers } from "ethers";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button, Modal, Spin, Tooltip } from "antd";
 import { ExportOutlined, KeyOutlined, SaveOutlined, SettingOutlined } from "@ant-design/icons";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { ethers } from "ethers";
 
-import { useStackup } from "@contexts/StackupContext";
 import { SaveAccess } from "@components/menu/SaveAccess";
+import { WalletExport } from "@components/menu/WalletExport";
+import { useFunWallet } from "@contexts/FunWalletContext";
+
 import { Address } from "../Address";
 import { WalletImport } from "./WalletImport";
-import { WalletExport } from "@components/menu/WalletExport";
 
 interface AccountProps {
   signer: ethers.Wallet;
@@ -21,12 +22,11 @@ enum Action {
 }
 
 export const Account: React.FC<AccountProps> = ({ signer }) => {
-  const [open, setOpen] = useState(false);
-
-  const [action, setAction] = useState<Action | null>(null);
-
   const navigate = useNavigate();
-  const { address } = useStackup();
+  const { address } = useFunWallet();
+
+  const [open, setOpen] = useState(false);
+  const [action, setAction] = useState<Action | null>(null);
 
   const [searchParams] = useSearchParams();
   useEffect(() => {

@@ -179,6 +179,10 @@ export const Transfer: React.FC = () => {
     if (event.key === "Enter") doSend();
   };
 
+  const setMaxAmount = () => {
+    if (balance && fee) setAmount(ethers.utils.formatUnits(balance.sub(fee)));
+  };
+
   const total = getTotal(amount, token.decimals);
   const exceedsBalance = total.add(fee || ethers.constants.Zero).gt(balance || ethers.constants.Zero);
   const disabled = exceedsBalance || loading || !amount || !toAddress;
@@ -205,6 +209,11 @@ export const Transfer: React.FC = () => {
           style={{ width: 320 }}
           onChange={e => setAmount(e.target.value)}
           prefix={<TokenIcon token={tokenId} style={{ width: 20, height: 20 }} />}
+          suffix={
+            <Button type="default" size="small" onClick={setMaxAmount}>
+              Max
+            </Button>
+          }
         />
         <TokenFee token={tokenId} fee={fee} />
         {exceedsBalance && amount && !loading ? (
