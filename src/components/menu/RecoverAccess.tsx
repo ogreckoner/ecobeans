@@ -5,34 +5,36 @@ import { Space, Steps } from "antd";
 import { SocialStep } from "@components/menu/save-access/SocialStep";
 import { RecoveryStep } from "@components/menu/save-access/RecoveryStep";
 import { ConfirmSave } from "@components/menu/save-access/ConfirmSave";
+import { LocalShareStep } from "@components/menu/recover-access/LocalShareStep";
 
-interface SaveAccessProps {
+interface RecoverAccessProps {
   signer: ethers.Wallet;
+
   onClose(): void;
 }
 
-export const SaveAccess: React.FC<SaveAccessProps> = ({ signer, onClose }) => {
-  const [step, setStep] = useState(1);
+export const RecoverAccess: React.FC<RecoverAccessProps> = ({ signer, onClose }) => {
+  const [step, setStep] = useState(0);
 
   if (step === 3) return <ConfirmSave onNext={onClose} />;
 
   return (
     <Space direction="vertical" style={{ width: "100%" }}>
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
-        <i>Save access will split your key into 3 shares</i>
+        <i>To recover your wallet you have to get 2 out 3 shares</i>
 
         <Steps
           responsive
-          progressDot
+          status={step === 1 ? "wait" : undefined}
           current={step}
           items={[
             {
-              title: "Local Share",
+              title: "Social Share",
               onClick: () => step > 1 && setStep(1),
             },
             {
-              title: "Social Share",
-              onClick: () => step > 2 && setStep(2),
+              title: "Local Share",
+              status: step >= 2 ? "error" : undefined,
             },
             {
               title: "Recovery Share",
@@ -43,10 +45,12 @@ export const SaveAccess: React.FC<SaveAccessProps> = ({ signer, onClose }) => {
         <hr />
       </Space>
 
-      {step === 1 ? (
-        <SocialStep onNext={() => setStep(2)} onPrevious={onClose} />
+      {step === 0 ? (
+        <SocialStep onNext={() => setStep(1)} onPrevious={onClose} />
+      ) : step === 1 ? (
+        <LocalShareStep onNext={() => setStep(2)} onComplete={() => setStep(3)} />
       ) : (
-        <RecoveryStep signer={signer} onNext={() => setStep(3)} onPrevious={() => setStep(1)} />
+        <RecoveryStep signer={signer} onPrevious={() => setStep(0)} onNext={() => setStep(2)} />
       )}
     </Space>
   );

@@ -9,7 +9,7 @@ import { usePeanutDeposit } from "@hooks/usePeanutDeposit";
 import { blockExplorerLink, convertAmount, formatTokenAmount, getTransaction } from "@helpers";
 
 import { TokenIcon } from "@components/token";
-import { useStackup } from "@contexts/StackupContext";
+import { useFunWallet } from "@contexts/FunWalletContext";
 import { TokenFee } from "@components/commons/TokenFee";
 import { useCurrentToken } from "@components/home/context/TokenContext";
 import { FeeOperation, useOperationFee } from "@hooks/useOperationFee";
@@ -41,7 +41,7 @@ function getValues({
 }
 
 export const Share: React.FC = () => {
-  const { address } = useStackup();
+  const { address } = useFunWallet();
   const { token: tokenId, balance } = useCurrentToken();
   const { deposit: makeDeposit } = usePeanutDeposit();
   const { data: fee } = useOperationFee(tokenId, FeeOperation.Share);

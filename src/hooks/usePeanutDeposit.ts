@@ -3,17 +3,16 @@ import { ethers } from "ethers";
 
 import * as Peanut from "@modules/peanut";
 import { ERC20__factory } from "@assets/contracts";
-import { FLAT_FEE_RECIPIENT, useStackup } from "@contexts/StackupContext";
-import { ENTRY_POINT_ADDRESS, ExecutionResult, getTokenInfo, Token, VERIFYING_PAYMASTER_ADDRESS } from "@constants";
+import { FLAT_FEE_RECIPIENT } from "@contexts/StackupContext";
+import { getTokenInfo, Token, VERIFYING_PAYMASTER_ADDRESS } from "@constants";
 import { PEANUT_V3_ADDRESS } from "@modules/peanut/constants";
-import { EntryPoint__factory } from "userop/dist/typechain";
-import { hasWalletBeenDeployed } from "@helpers/contracts";
 import { OPTIMISM_PROVIDER } from "@modules/blockchain/providers";
+import { getSimpleAccount, useFunWallet } from "@contexts/FunWalletContext";
 
 const provider = OPTIMISM_PROVIDER;
 
 export const usePeanutDeposit = () => {
-  const { address, simpleAccount, client } = useStackup();
+  const { address, wallet, signer } = useFunWallet();
 
   const buildOps = useCallback(
     async (tokenId: Token, value: ethers.BigNumber, fee: ethers.BigNumber, password?: string) => {
@@ -48,62 +47,24 @@ export const usePeanutDeposit = () => {
       // Reverse order of transactions to execute token approvals first
       txs.reverse();
 
+      const simpleAccount = await getSimpleAccount(signer, provider);
+
       simpleAccount.executeBatch(
         txs.map(tx => tx.to),
         txs.map(tx => tx.data),
       );
+
+      return simpleAccount;
     },
-    [address, provider, simpleAccount],
+    [address, provider],
   );
 
   const deposit = async (token: Token, password: string, amount: ethers.BigNumber, fee: ethers.BigNumber) => {
-    await buildOps(token, amount, fee, password);
+    const simpleAccount = await buildOps(token, amount, fee, password);
 
-    const res = await client.sendUserOperation(simpleAccount);
-    return res.wait();
+    const res = await wallet.executeBatch(simpleAccount, provider.network.chainId, fee);
+    return { transactionHash: res.txid! };
   };
 
-  const simulateDeposit = useCallback(
-    async (tokenId: Token) => {
-      try {
-        const token = getTokenInfo(tokenId);
-        const amount = ethers.BigNumber.from(1);
-        await buildOps(tokenId, amount, amount);
-
-        const userOp = await client.buildUserOperation(simpleAccount);
-
-        const balanceOfData = ERC20__factory.createInterface().encodeFunctionData("balanceOf", [userOp.sender]);
-        const beforeBalance = await provider.call({ to: token.address, data: balanceOfData });
-
-        const entryPointInterface = EntryPoint__factory.createInterface();
-        const callResult = await provider.call({
-          to: ENTRY_POINT_ADDRESS,
-          data: entryPointInterface.encodeFunctionData("simulateHandleOp", [userOp, token.address, balanceOfData]),
-        });
-
-        const result = entryPointInterface.decodeErrorResult(
-          "ExecutionResult",
-          callResult,
-        ) as unknown as ExecutionResult;
-
-        return ethers.BigNumber.from(beforeBalance).sub(result.targetResult).sub(amount);
-      } catch (e) {
-        const gasPrice = await provider.getGasPrice();
-
-        const PEANUT_DEPOSIT_GAS = 80_000;
-        const VALIDATION_GAS = 100_000;
-        const INIT_CODE_GAS = 385_266;
-
-        const hasBeenDeployed = await hasWalletBeenDeployed(provider, simpleAccount.getSender());
-
-        let gas = PEANUT_DEPOSIT_GAS + VALIDATION_GAS;
-        if (!hasBeenDeployed) gas += INIT_CODE_GAS;
-
-        return gasPrice.mul(gas);
-      }
-    },
-    [buildOps, client, provider, simpleAccount],
-  );
-
-  return { deposit, simulateDeposit };
+  return { deposit };
 };
