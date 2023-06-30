@@ -2,6 +2,8 @@ import { ethers } from "ethers";
 import { useState, useEffect } from "react";
 import { useBurnerSigner } from "./useBurnerSigner";
 
+export const PRIVATE_KEY_LOCAL_STORAGE_KEY = "metaPrivateKey";
+
 export const useBurnerWallet = (): ethers.Wallet | undefined => {
   const { signer: burnerSigner, loadOrGenerateBurner } = useBurnerSigner();
 
@@ -13,7 +15,7 @@ export const useBurnerWallet = (): ethers.Wallet | undefined => {
 
   useEffect(() => {
     const getSigner = () => {
-      const storedPK = window.localStorage.getItem("metaPrivateKey");
+      const storedPK = window.localStorage.getItem(PRIVATE_KEY_LOCAL_STORAGE_KEY);
       if (storedPK) {
         try {
           return new ethers.Wallet(storedPK);

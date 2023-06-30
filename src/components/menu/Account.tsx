@@ -1,15 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Button, Modal, Spin, Tooltip } from "antd";
-import { ExportOutlined, KeyOutlined, SaveOutlined, SettingOutlined } from "@ant-design/icons";
 import { ethers } from "ethers";
+import { Button, Modal, Spin, Tooltip } from "antd";
+import { KeyOutlined, SaveOutlined, SettingOutlined } from "@ant-design/icons";
 
 import { SaveAccess } from "@components/menu/SaveAccess";
-import { WalletExport } from "@components/menu/WalletExport";
 import { useFunWallet } from "@contexts/FunWalletContext";
 
 import { Address } from "../Address";
-import { WalletImport } from "./WalletImport";
+import { RecoverAccess } from "./RecoverAccess";
 
 interface AccountProps {
   signer: ethers.Wallet;
@@ -17,8 +16,7 @@ interface AccountProps {
 
 enum Action {
   Save,
-  Import,
-  Export,
+  Login,
 }
 
 export const Account: React.FC<AccountProps> = ({ signer }) => {
@@ -37,7 +35,7 @@ export const Account: React.FC<AccountProps> = ({ signer }) => {
   }, [navigate, searchParams]);
 
   const showImportButton = (
-    <Button onClick={() => setAction(Action.Import)} icon={<SaveOutlined />}>
+    <Button onClick={() => setAction(Action.Login)} icon={<SaveOutlined />}>
       Log In
     </Button>
   );
@@ -72,27 +70,13 @@ export const Account: React.FC<AccountProps> = ({ signer }) => {
         onOk={() => setOpen(!open)}
         onCancel={() => setOpen(!open)}
         afterClose={() => setAction(null)}
-        footer={
-          action === Action.Save || action === null ? (
-            [showImportButton, privateKeyButton]
-          ) : action === Action.Export ? (
-            <Button onClick={() => setAction(Action.Save)} icon={<ExportOutlined />}>
-              It&apos;s saved
-            </Button>
-          ) : null
-        }
+        footer={action === null ? [showImportButton, privateKeyButton] : null}
         title={address ? <Address copyable address={address} /> : <Spin />}
       >
-        {action === Action.Import ? (
-          <WalletImport onClose={() => setAction(null)} />
+        {action === Action.Login ? (
+          <RecoverAccess signer={signer} onClose={() => setAction(null)} />
         ) : action === Action.Save ? (
-          <SaveAccess
-            address={address}
-            privateKey={signer.privateKey}
-            onHandleExport={() => setAction(Action.Export)}
-          />
-        ) : action === Action.Export ? (
-          <WalletExport privateKey={signer.privateKey} />
+          <SaveAccess signer={signer} onClose={() => setAction(null)} />
         ) : null}
       </Modal>
     </>
