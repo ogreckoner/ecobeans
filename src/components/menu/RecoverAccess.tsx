@@ -21,7 +21,7 @@ export const RecoverAccess: React.FC<RecoverAccessProps> = ({ signer, onClose })
   return (
     <Space direction="vertical" style={{ width: "100%" }}>
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
-        <i>To recover your wallet you have to get 2 out 3 shares</i>
+        <i>To recover your wallet you have to get 2 out of 3 shares</i>
 
         <Steps
           responsive
