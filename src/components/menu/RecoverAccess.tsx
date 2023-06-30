@@ -3,9 +3,9 @@ import { ethers } from "ethers";
 import { Space, Steps } from "antd";
 
 import { SocialStep } from "@components/menu/save-access/SocialStep";
-import { RecoveryStep } from "@components/menu/save-access/RecoveryStep";
-import { ConfirmSave } from "@components/menu/save-access/ConfirmSave";
 import { LocalShareStep } from "@components/menu/recover-access/LocalShareStep";
+import { ConfirmRecovery } from "@components/menu/recover-access/ConfirmRecovery";
+import { RecoverShareStep } from "@components/menu/recover-access/RecoverShareStep";
 
 interface RecoverAccessProps {
   signer: ethers.Wallet;
@@ -16,7 +16,7 @@ interface RecoverAccessProps {
 export const RecoverAccess: React.FC<RecoverAccessProps> = ({ signer, onClose }) => {
   const [step, setStep] = useState(0);
 
-  if (step === 3) return <ConfirmSave onNext={onClose} />;
+  if (step === 3) return <ConfirmRecovery onNext={onClose} />;
 
   return (
     <Space direction="vertical" style={{ width: "100%" }}>
@@ -48,9 +48,9 @@ export const RecoverAccess: React.FC<RecoverAccessProps> = ({ signer, onClose })
       {step === 0 ? (
         <SocialStep onNext={() => setStep(1)} onPrevious={onClose} />
       ) : step === 1 ? (
-        <LocalShareStep onNext={() => setStep(2)} onComplete={() => setStep(3)} />
+        <LocalShareStep signer={signer} onNext={() => setStep(2)} onComplete={() => setStep(3)} onClose={onClose} />
       ) : (
-        <RecoveryStep signer={signer} onPrevious={() => setStep(0)} onNext={() => setStep(2)} />
+        <RecoverShareStep signer={signer} onPrevious={() => setStep(0)} onNext={() => setStep(3)} onClose={onClose} />
       )}
     </Space>
   );
