@@ -1,28 +1,42 @@
 import React, { useEffect } from "react";
-import { Space, Spin, Typography } from "antd";
+import { notification, Space, Spin, Typography } from "antd";
 
 import { useWeb3Auth } from "@hooks/useWeb3Auth";
 import { LoadingOutlined } from "@ant-design/icons";
+import { ethers } from "ethers";
 
 const { Text } = Typography;
 
 interface LocalShareStepProps {
-  onNext(): void;
+  signer: ethers.Wallet;
 
+  onNext(): void;
+  onClose(): void;
   onComplete(): void;
 }
 
-export const LocalShareStep: React.FC<LocalShareStepProps> = ({ onNext, onComplete }) => {
+export const LocalShareStep: React.FC<LocalShareStepProps> = ({ onNext, onComplete, onClose }) => {
   const web3Auth = useWeb3Auth();
 
   useEffect(() => {
     (async () => {
       try {
         await web3Auth.getShareFromStorage();
-        onComplete();
       } catch (error) {
         console.warn("[getShareFromStorage:error]", error);
         onNext();
+        return;
+      }
+      try {
+        await web3Auth.reconstruct();
+        onComplete();
+      } catch (error) {
+        notification.error({
+          placement: "topRight",
+          message: "Unable to recover access",
+          description: "There is not a wallet stored",
+        });
+        onClose();
       }
     })();
   }, []);

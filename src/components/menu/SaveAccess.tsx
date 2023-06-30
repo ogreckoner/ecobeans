@@ -23,7 +23,6 @@ export const SaveAccess: React.FC<SaveAccessProps> = ({ signer, onClose }) => {
 
         <Steps
           responsive
-          progressDot
           current={step}
           items={[
             {
@@ -44,7 +43,7 @@ export const SaveAccess: React.FC<SaveAccessProps> = ({ signer, onClose }) => {
       </Space>
 
       {step === 1 ? (
-        <SocialStep onNext={() => setStep(2)} onPrevious={onClose} />
+        <SocialStep reconstruct onNext={() => setStep(2)} onPrevious={onClose} />
       ) : (
         <RecoveryStep signer={signer} onNext={() => setStep(3)} onPrevious={() => setStep(1)} />
       )}

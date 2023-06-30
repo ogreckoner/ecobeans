@@ -105,7 +105,7 @@ export const useWeb3Auth = () => {
     return webStorageModule.inputShareFromWebStorage();
   };
 
-  const login = async (method: AuthMethod) => {
+  const login = async (method: AuthMethod, reconstruct = false) => {
     if (!isTorusServiceProvider(tKey.serviceProvider)) {
       throw new Error("Invalid service provider");
     }
@@ -113,7 +113,14 @@ export const useWeb3Auth = () => {
     await tKey.serviceProvider.triggerLogin(verifierMap[method]);
     await tKey.initialize();
 
-    // await tKey.reconstructKey();
+    if (reconstruct) {
+      try {
+        await getShareFromStorage();
+      } catch (err) {
+        await tKey._initializeNewKey({ initializeModules: true });
+      }
+      await tKey.reconstructKey();
+    }
   };
 
   const getPrivateKeys = async () => {
@@ -138,25 +145,31 @@ export const useWeb3Auth = () => {
 
   const save = async (wallet: ethers.Wallet, answer?: string) => {
     try {
+      await tKey.initialize();
+
       const privateKeyModule = tKey.modules.privateKey as PrivateKeyModule;
       const securityQuestionsModule = tKey.modules.securityQuestions as SecurityQuestionsModule;
 
-      let question: string | undefined;
-      try {
-        question = securityQuestionsModule.getSecurityQuestions();
-      } catch (err) {
-        console.warn("Question not found", err);
-      }
+      if (answer) {
+        let question: string | undefined;
+        try {
+          question = securityQuestionsModule.getSecurityQuestions();
+        } catch (err) {
+          console.warn("Question not found", err);
+        }
 
-      if (!question && answer) {
-        await securityQuestionsModule.generateNewShareWithSecurityQuestions(SECURITY_QUESTION, answer);
+        if (question) {
+          await securityQuestionsModule.changeSecurityQuestionAndAnswer(answer, SECURITY_QUESTION);
+        } else {
+          await securityQuestionsModule.generateNewShareWithSecurityQuestions(answer, SECURITY_QUESTION);
+        }
       }
 
       let privateKey;
       try {
         privateKey = await getPrivateKeys();
       } catch (error) {
-        console.log("error", error);
+        console.log("[getPrivateKeys:error]", error);
       }
 
       const pkBn = new BN(wallet.privateKey.slice(2), "hex");
@@ -172,17 +185,11 @@ export const useWeb3Auth = () => {
   };
 
   const reconstruct = async () => {
-    try {
-      const privateKey = await getPrivateKeys();
-      if (privateKey) {
-        const signer = new ethers.Wallet(privateKey);
-        dispatch({ type: Web3AuthActionType.SET_SIGNER, signer });
-      } else {
-        console.warn("There is not a private key to reconstruct");
-      }
-    } catch (error) {
-      console.error("[reconstruct:error]", error);
-    }
+    const privateKey = await getPrivateKeys();
+    if (!privateKey) throw new Error("Unable to reconstruct - no key stored");
+    const wallet = new ethers.Wallet(privateKey);
+    saveToLocalstorage(wallet.privateKey);
+    dispatch({ type: Web3AuthActionType.SET_SIGNER, signer: wallet });
   };
 
   const answerSecurityQuestions = async (answer: string) => {

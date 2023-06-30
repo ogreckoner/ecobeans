@@ -4,11 +4,12 @@ import { Button, Col, Row, Space } from "antd";
 import { GoogleOutlined, TwitterOutlined } from "@ant-design/icons";
 
 interface SocialStepProps {
+  reconstruct?: boolean;
   onPrevious(): void;
   onNext(): void;
 }
 
-export const SocialStep: React.FC<SocialStepProps> = ({ onPrevious, onNext }) => {
+export const SocialStep: React.FC<SocialStepProps> = ({ onPrevious, onNext, reconstruct }) => {
   const web3Auth = useWeb3Auth();
 
   const [loading, setLoading] = useState<AuthMethod>();
@@ -16,7 +17,7 @@ export const SocialStep: React.FC<SocialStepProps> = ({ onPrevious, onNext }) =>
   const login = async (method: AuthMethod) => {
     setLoading(method);
     try {
-      await web3Auth.login(method);
+      await web3Auth.login(method, reconstruct);
       onNext();
     } catch (error) {
       console.log("error", error);
