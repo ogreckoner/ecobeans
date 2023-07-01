@@ -9,36 +9,14 @@ import SecurityQuestionsModule from "@tkey/security-questions";
 import TorusServiceProvider from "@tkey/service-provider-torus";
 import PrivateKeyModule, { SECP256K1Format } from "@tkey/private-keys";
 import { IServiceProvider } from "@tkey/common-types";
-import { SubVerifierDetails } from "@toruslabs/customauth";
 
 import { NETWORK } from "@constants";
 import { useWeb3AuthState, Web3AuthActionType } from "@contexts/Web3AuthContext";
 import { PRIVATE_KEY_LOCAL_STORAGE_KEY } from "@hooks/useBurnerWallet";
+import { AuthMethod, VERIFIER_MAP, WEB3_AUTH_CLIENT_ID } from "@constants/web3auth";
 
 const isTestnet = NETWORK.chainId === 420;
-const AUTH_DOMAIN = isTestnet ? "https://torus-test.auth0.com" : "https://torus.auth0.com";
-const web3AuthClientId = "BIlPvlyyNE2PV19so5uecrPqlutXHSZ0U7dzeFgRjIddtSDjF3orPX6v5AjRu-Jas82oZinFiX9drIK1K8zuDwo";
-
-export const SECURITY_QUESTION = "What is your password?";
-
-export enum AuthMethod {
-  GOOGLE = "google",
-  TWITTER = "twitter",
-}
-
-const verifierMap: Record<AuthMethod, SubVerifierDetails> = {
-  [AuthMethod.GOOGLE]: {
-    typeOfLogin: "google",
-    verifier: "web3auth-testnet-verifier",
-    clientId: "134678854652-vnm7amoq0p23kkpkfviveul9rb26rmgn.apps.googleusercontent.com",
-  },
-  [AuthMethod.TWITTER]: {
-    typeOfLogin: "twitter",
-    verifier: "torus-auth0-twitter-lrc",
-    clientId: "A7H8kkcmyFRlusJQ9dZiqBLraG2yWIsO",
-    jwtParams: { domain: AUTH_DOMAIN },
-  },
-};
+const SECURITY_QUESTION = "What is your password?";
 
 const webStorageModule = new WebStorageModule();
 const securityQuestionsModule = new SecurityQuestionsModule();
@@ -49,9 +27,9 @@ const storageLayer = new TorusStorageLayer({
 
 const serviceProvider = new TorusServiceProvider({
   customAuthArgs: {
-    web3AuthClientId,
+    network: "cyan",
+    web3AuthClientId: WEB3_AUTH_CLIENT_ID,
     enableLogging: isTestnet,
-    network: isTestnet ? "testnet" : "mainnet",
     baseUrl: `${window.location.origin}/serviceworker`,
   },
 });
@@ -65,8 +43,6 @@ const tKey = new ThresholdKey({
     securityQuestions: securityQuestionsModule,
   },
 });
-
-console.log("tKey", tKey);
 
 function isTorusServiceProvider(provider: IServiceProvider): provider is TorusServiceProvider {
   return "directWeb" in provider;
@@ -110,7 +86,7 @@ export const useWeb3Auth = () => {
       throw new Error("Invalid service provider");
     }
 
-    await tKey.serviceProvider.triggerLogin(verifierMap[method]);
+    await tKey.serviceProvider.triggerLogin(VERIFIER_MAP[method]);
     await tKey.initialize();
 
     if (reconstruct) {
