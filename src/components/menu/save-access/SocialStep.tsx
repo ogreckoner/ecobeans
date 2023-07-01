@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { AuthMethod, useWeb3Auth } from "@hooks/useWeb3Auth";
 import { Button, Col, Row, Space } from "antd";
 import { GoogleOutlined, TwitterOutlined } from "@ant-design/icons";
+
+import { AuthMethod } from "@constants/web3auth";
+import { useWeb3Auth } from "@hooks/useWeb3Auth";
 
 interface SocialStepProps {
   reconstruct?: boolean;

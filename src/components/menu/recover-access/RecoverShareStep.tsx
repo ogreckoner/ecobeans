@@ -104,7 +104,7 @@ export const RecoverShareStep: React.FC<RecoverShareStepProps> = ({ onNext, onPr
           </Button>
           <Form.Item>
             <Button type="primary" htmlType="submit">
-              Register
+              Recover
             </Button>
           </Form.Item>
         </div>
