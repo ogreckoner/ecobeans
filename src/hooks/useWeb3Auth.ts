@@ -28,9 +28,9 @@ const storageLayer = new TorusStorageLayer({
 const serviceProvider = new TorusServiceProvider({
   customAuthArgs: {
     network: "cyan",
-    web3AuthClientId: WEB3_AUTH_CLIENT_ID,
     enableLogging: isTestnet,
-    baseUrl: `${window.location.origin}/serviceworker`,
+    web3AuthClientId: WEB3_AUTH_CLIENT_ID,
+    baseUrl: `${window.location.origin}/serviceworker/`,
   },
 });
 
@@ -55,7 +55,7 @@ export const useWeb3Auth = () => {
     const init = async () => {
       // Init Service Provider
       try {
-        await serviceProvider.init({ skipSw: true });
+        await serviceProvider.init({});
       } catch (error) {
         console.error(error);
       }

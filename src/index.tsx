@@ -21,4 +21,3 @@ root.render(
     </QueryClientProvider>
   </BrowserRouter>,
 );
-export { isBaseNetwork } from "@modules/blockchain/utils";
