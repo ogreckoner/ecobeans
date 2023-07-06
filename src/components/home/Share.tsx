@@ -9,12 +9,12 @@ import { usePeanutDeposit } from "@hooks/usePeanutDeposit";
 import { blockExplorerLink, convertAmount, formatTokenAmount, getTransaction } from "@helpers";
 
 import { TokenIcon } from "@components/token";
-import { useFunWallet } from "@contexts/FunWalletContext";
 import { TokenFee } from "@components/commons/TokenFee";
 import { useCurrentToken } from "@components/home/context/TokenContext";
 import { FeeOperation, useOperationFee } from "@hooks/useOperationFee";
 import { getTokenInfo } from "@constants";
 import { OPTIMISM_PROVIDER } from "@modules/blockchain/providers";
+import { useStackup } from "@contexts/StackupContext";
 
 function getValues({
   amount,
@@ -41,7 +41,7 @@ function getValues({
 }
 
 export const Share: React.FC = () => {
-  const { address } = useFunWallet();
+  const { address } = useStackup();
   const { token: tokenId, balance } = useCurrentToken();
   const { deposit: makeDeposit } = usePeanutDeposit();
   const { data: fee } = useOperationFee(tokenId, FeeOperation.Share);
@@ -54,21 +54,21 @@ export const Share: React.FC = () => {
   const token = getTokenInfo(tokenId);
 
   const doSend = async () => {
-    if (!fee) return;
+    if (!fee || !address) return;
     setLoading(true);
     alertApi.clear();
     try {
       const value = convertAmount(amount, token.decimals);
 
       const password = Peanut.getRandomString();
-      const userOpResponse = await makeDeposit(tokenId, password, value, fee);
+      const userOpHash = await makeDeposit(tokenId, password, value, fee);
 
-      if (!userOpResponse) {
+      if (!userOpHash) {
         alertApi.error({ message: "Unexpected error", description: "Please contact us for help" });
         return;
       }
 
-      const tx = await getTransaction(OPTIMISM_PROVIDER, userOpResponse.transactionHash);
+      const tx = await getTransaction(OPTIMISM_PROVIDER, userOpHash.transactionHash);
       const receipt = await tx.wait();
 
       const deposit = Peanut.getDepositEvent(address, receipt);
@@ -84,7 +84,7 @@ export const Share: React.FC = () => {
                 {formatTokenAmount(ethers.utils.formatUnits(value, token.decimals), 3)} {token.name}
               </b>{" "}
               tokens.
-              <Typography.Link href={blockExplorerLink(userOpResponse.transactionHash)} target="_blank">
+              <Typography.Link href={blockExplorerLink(userOpHash.transactionHash)} target="_blank">
                 See transaction.
               </Typography.Link>
               <pre>{link}</pre>

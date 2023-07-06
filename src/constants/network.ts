@@ -3,6 +3,10 @@ export const INFURA_ID = process.env.REACT_APP_INFURA_ID;
 export type Network = "optimism" | "base";
 type AllNetwork = Network | "mainnet" | "goerli-optimism" | "base-goerli";
 
+export const IS_BASE_ENABLED = process.env.REACT_APP_IS_BASE_ENABLED
+  ? process.env.REACT_APP_IS_BASE_ENABLED === "1" || process.env.REACT_APP_IS_BASE_ENABLED === "true"
+  : true;
+
 export interface INetwork {
   name: string;
   color: string;

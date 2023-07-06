@@ -7,7 +7,7 @@ import { About, Claim, Home } from "@views";
 import { Account, Footer, Header } from "@components";
 
 import { useWeb3Auth } from "@hooks/useWeb3Auth";
-import { FunWalletProvider } from "@contexts/FunWalletContext";
+import { StackupProvider } from "@contexts/StackupContext";
 import { FadeTransitionRoutes } from "@components/routes/FadeTransitionRoutes";
 
 import "./App.css";
@@ -35,13 +35,13 @@ function App() {
 
   return (
     <div className="App">
-      <FunWalletProvider signer={signer}>
+      <StackupProvider signer={signer}>
         <Header>
           <Account signer={signer} />
         </Header>
         {routes}
         <Footer />
-      </FunWalletProvider>
+      </StackupProvider>
     </div>
   );
 }

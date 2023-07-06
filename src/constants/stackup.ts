@@ -1,13 +1,22 @@
-import { ethers } from "ethers";
+// export interface ExecutionResult {
+//   paid: ethers.BigNumber;
+//   preOpGas: ethers.BigNumber;
+//   targetResult: string;
+//   targetSuccess: boolean;
+//   validAfter: number;
+//   validUntil: number;
+// }
 
-export const STACKUP_API_KEY = process.env.REACT_APP_STACKUP_API_KEY!;
-export const VERIFYING_PAYMASTER_ADDRESS = ethers.utils.getAddress("0xE93ECa6595fe94091DC1af46aaC2A8b5D7990770");
+const STACKUP_OPTIMISM_API_KEY = process.env.REACT_APP_STACKUP_OPTIMISM_API_KEY!;
+const STACKUP_BASE_API_KEY = process.env.REACT_APP_STACKUP_BASE_API_KEY!;
 
-export interface ExecutionResult {
-  paid: ethers.BigNumber;
-  preOpGas: ethers.BigNumber;
-  targetResult: string;
-  targetSuccess: boolean;
-  validAfter: number;
-  validUntil: number;
+export const STACKUP_OPTIMISM_RPC_URL = `https://api.stackup.sh/v1/node/${STACKUP_OPTIMISM_API_KEY}`;
+export const STACKUP_BASE_RPC_URL = `https://api.stackup.sh/v1/node/${STACKUP_BASE_API_KEY}`;
+
+let paymasterUrl: URL;
+try {
+  paymasterUrl = new URL("/paymaster", process.env.REACT_APP_RELAYER_URL!);
+} catch (e) {
+  throw new Error("Invalid Relayer URL");
 }
+export const PAYMASTER_URL = paymasterUrl.toString();

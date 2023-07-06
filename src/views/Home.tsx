@@ -8,10 +8,10 @@ import { Segments } from "@components/home";
 import { TokenIcon } from "@components/token";
 import { TokenContext } from "@components/home/context/TokenContext";
 
-import { getTokenInfo, Token } from "@constants";
+import { getTokenInfo, IS_BASE_ENABLED, Token } from "@constants";
 import { formatTokenAmount } from "@helpers";
 import { useBalance } from "@hooks/useBalance";
-import { useFunWallet } from "@contexts/FunWalletContext";
+import { useStackup } from "@contexts/StackupContext";
 
 interface HomeProps {
   token: Token;
@@ -38,15 +38,17 @@ const TokenBalance: React.FC<{ decimals: number; balance?: ethers.BigNumber; ico
 
 export const Home: React.FC<HomeProps> = ({ token }) => {
   const navigate = useNavigate();
-  const { address } = useFunWallet();
+  const { address } = useStackup();
 
   const { balance: baseBalance } = useBalance(token, address, "base");
   const { balance: optimismBalance } = useBalance(token, address, "optimism");
 
   const { decimals } = getTokenInfo(token);
 
-  const balance = baseBalance && optimismBalance && baseBalance.add(optimismBalance);
   const changeToken = (token: Token) => navigate(`/t/${token}`, { state: { redirect: true } });
+  const balance = IS_BASE_ENABLED
+    ? baseBalance && optimismBalance && baseBalance.add(optimismBalance)
+    : optimismBalance;
 
   return (
     <TokenContext.Provider value={{ token, balance, optimismBalance, baseBalance }}>
