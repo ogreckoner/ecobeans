@@ -1,8 +1,8 @@
 import { ethers } from "ethers";
 
 import { ERC20__factory } from "@assets/contracts";
-import { getTokenInfo, Network, Token } from "@constants";
-import { FLAT_FEE_RECIPIENT, getClient, getSimpleAccount, useStackup } from "@contexts/StackupContext";
+import { FLAT_FEE_RECIPIENT, getTokenInfo, Network, Token } from "@constants";
+import { getClient, getSimpleAccount, useStackup } from "@contexts/StackupContext";
 
 import * as Peanut from "@modules/peanut";
 import { PEANUT_V3_ADDRESS } from "@modules/peanut/constants";

@@ -41,7 +41,7 @@ export const NETWORKS: Record<AllNetwork, INetwork> = {
     name: "base",
     color: "#f01a37",
     chainId: 8453,
-    blockExplorer: "https://goerli.basescan.org//",
+    blockExplorer: "https://goerli.basescan.org/",
     rpcUrl: `https://goerli.base.org`,
   },
   "base-goerli": {

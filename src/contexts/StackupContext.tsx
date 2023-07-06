@@ -2,7 +2,13 @@ import React, { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { Client, Presets, UserOperationMiddlewareFn } from "userop";
 
-import { Network, PAYMASTER_URL, STACKUP_BASE_RPC_URL, STACKUP_OPTIMISM_RPC_URL } from "@constants";
+import {
+  Network,
+  PAYMASTER_URL_BASE,
+  PAYMASTER_URL_OPTIMISM,
+  STACKUP_BASE_RPC_URL,
+  STACKUP_OPTIMISM_RPC_URL,
+} from "@constants";
 
 interface IStackupProvider {
   address?: string;
@@ -16,19 +22,21 @@ const StackupContext = React.createContext<IStackupProvider>({
   signer: {} as ethers.Signer,
 });
 
-export const FLAT_FEE_RECIPIENT = ethers.utils.getAddress(process.env.REACT_APP_FLAT_FEE_RECIPIENT!);
-export const VERIFYING_PAYMASTER_ECO = Presets.Middleware.verifyingPaymaster(PAYMASTER_URL, { type: "flat" });
-
 export const useStackup = () => React.useContext<IStackupProvider>(StackupContext);
 
 function getStackupRpcUrl(network: Network) {
   return network === "base" ? STACKUP_BASE_RPC_URL : STACKUP_OPTIMISM_RPC_URL;
 }
 
+function getPaymaster(network: Network) {
+  const url = network === "base" ? PAYMASTER_URL_BASE : PAYMASTER_URL_OPTIMISM;
+  return Presets.Middleware.verifyingPaymaster(url, { type: "flat" });
+}
+
 export const getSimpleAccount = (
   signer: ethers.Signer,
   network: Network,
-  paymaster: UserOperationMiddlewareFn = VERIFYING_PAYMASTER_ECO,
+  paymaster: UserOperationMiddlewareFn = getPaymaster(network),
 ) => {
   return Presets.Builder.SimpleAccount.init(signer, getStackupRpcUrl(network), { paymasterMiddleware: paymaster });
 };
