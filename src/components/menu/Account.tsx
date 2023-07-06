@@ -5,7 +5,7 @@ import { Button, Modal, Spin, Tooltip } from "antd";
 import { KeyOutlined, SaveOutlined, SettingOutlined } from "@ant-design/icons";
 
 import { SaveAccess } from "@components/menu/SaveAccess";
-import { useFunWallet } from "@contexts/FunWalletContext";
+import { useStackup } from "@contexts/StackupContext";
 
 import { Address } from "../Address";
 import { RecoverAccess } from "./RecoverAccess";
@@ -21,7 +21,7 @@ enum Action {
 
 export const Account: React.FC<AccountProps> = ({ signer }) => {
   const navigate = useNavigate();
-  const { address } = useFunWallet();
+  const { address } = useStackup();
 
   const [open, setOpen] = useState(false);
   const [action, setAction] = useState<Action | null>(null);

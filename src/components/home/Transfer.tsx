@@ -6,7 +6,6 @@ import { ScanOutlined, SendOutlined } from "@ant-design/icons";
 import { Alert, Button, FloatButton, Input, InputProps, Space, Typography } from "antd";
 
 import { useAlert } from "@hooks/useAlert";
-import { useFunTokenTransfer } from "@hooks/useFunTokenTransfer";
 import { FeeOperation, useOperationFee } from "@hooks/useOperationFee";
 import { blockExplorerLink, convertAmount, formatTokenAmount } from "@helpers";
 
@@ -16,7 +15,8 @@ import { TokenIcon } from "@components/token";
 import { TokenFee } from "@components/commons/TokenFee";
 import { AddressInput } from "@components/AddressInput";
 import { useCurrentToken } from "@components/home/context/TokenContext";
-import { getNetwork, getTokenInfo } from "@constants";
+import { getNetwork, getTokenInfo, IS_BASE_ENABLED } from "@constants";
+import { useTokenTransfer } from "@hooks/useTokenTransfer";
 
 function getTotal(amount: string, decimals: number) {
   try {
@@ -86,8 +86,8 @@ export const Transfer: React.FC = () => {
 
   const { data: fee } = useOperationFee(tokenId, FeeOperation.Transfer);
 
-  const { transfer: transferBase } = useFunTokenTransfer(tokenId, "base");
-  const { transfer: transferOptimism } = useFunTokenTransfer(tokenId, "optimism");
+  const { transfer: transferBase } = useTokenTransfer(tokenId, "base");
+  const { transfer: transferOptimism } = useTokenTransfer(tokenId, "optimism");
 
   const [alertApi, alertElem] = useAlert({ className: "transfer-alert" });
 
@@ -106,31 +106,43 @@ export const Transfer: React.FC = () => {
     alertApi.clear();
     const value = convertAmount(amount, token.decimals);
     try {
-      const transferAmounts = calculateTransferAmounts(value, fee, [optimismBalance, baseBalance]);
-      const [optimismTransferData, baseTransferData] = transferAmounts;
-
       let opTx: TransactionResult = { error: true };
       let baseTx: TransactionResult = { error: true };
       let transferred = ethers.constants.Zero;
 
-      if (!optimismTransferData.amount.isZero()) {
+      if (IS_BASE_ENABLED) {
+        const transferAmounts = calculateTransferAmounts(value, fee, [optimismBalance, baseBalance]);
+        const [optimismTransferData, baseTransferData] = transferAmounts;
+
+        if (!optimismTransferData.amount.isZero()) {
+          try {
+            const opTxHash = await transferOptimism(toAddress, optimismTransferData.amount, optimismTransferData.fee);
+            transferred = transferred.add(optimismTransferData.amount);
+            opTx = { hash: opTxHash, amount: optimismTransferData.amount };
+          } catch (e) {
+            console.error("optimism-transfer-failed", e);
+          }
+        }
+        if (!baseTransferData.amount.isZero()) {
+          try {
+            const baseTxHash = await transferBase(toAddress, baseTransferData.amount, baseTransferData.fee);
+            transferred = transferred.add(baseTransferData.amount);
+            baseTx = { hash: baseTxHash, amount: baseTransferData.amount };
+          } catch (e) {
+            console.error("base-transfer-failed", e);
+          }
+        }
+      } else {
+        transferred = value;
         try {
-          const opTxHash = await transferOptimism(toAddress, optimismTransferData.amount, optimismTransferData.fee);
-          transferred = transferred.add(optimismTransferData.amount);
-          opTx = { hash: opTxHash, amount: optimismTransferData.amount };
+          const opTxHash = await transferOptimism(toAddress, value, fee);
+          opTx = { hash: opTxHash, amount: value };
         } catch (e) {
           console.error("optimism-transfer-failed", e);
         }
       }
-      if (!baseTransferData.amount.isZero()) {
-        try {
-          const baseTxHash = await transferBase(toAddress, baseTransferData.amount, baseTransferData.fee);
-          transferred = transferred.add(baseTransferData.amount);
-          baseTx = { hash: baseTxHash, amount: baseTransferData.amount };
-        } catch (e) {
-          console.error("base-transfer-failed", e);
-        }
-      }
+
+      console.log({ opTx, baseTx });
 
       if (opTx.error && baseTx.error) {
         alertApi.error({ message: "Transfer failed" });

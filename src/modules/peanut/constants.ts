@@ -18,13 +18,9 @@ function getPeanutAddress() {
 export const PEANUT_V3_ADDRESS = getPeanutAddress();
 
 let claimUrl: URL;
-let paymasterUrl: URL;
 try {
   claimUrl = new URL("/peanut/claim", process.env.REACT_APP_RELAYER_URL!);
-  paymasterUrl = new URL("/paymaster", process.env.REACT_APP_RELAYER_URL!);
 } catch (e) {
   throw new Error("Invalid Relayer URL");
 }
-
-export const PAYMASTER_URL = paymasterUrl.toString();
 export const PEANUT_CLAIM_URL = claimUrl.toString();

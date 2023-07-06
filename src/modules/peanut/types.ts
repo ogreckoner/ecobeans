@@ -12,5 +12,4 @@ export interface ClaimRequest {
   password: string;
   depositIdx: number;
   recipient: string;
-  network: string;
 }

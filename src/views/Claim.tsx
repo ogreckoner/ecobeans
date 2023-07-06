@@ -59,8 +59,10 @@ const ClaimContent: React.FC<ClaimContentProps> = ({ token: tokenId, chainId }) 
 
   const [loading, setLoading] = useState(false);
 
-  const provider = useMemo(() => getNetworkProvider(chainId), [chainId]);
-  const peanutV3 = useMemo(() => PeanutV3__factory.connect(PEANUT_V3_ADDRESS, provider), [provider]);
+  const peanutV3 = useMemo(() => {
+    const provider = getNetworkProvider(chainId);
+    return PeanutV3__factory.connect(PEANUT_V3_ADDRESS, provider);
+  }, [chainId]);
 
   const [result, , state] = useContractReader(peanutV3, peanutV3.deposits, [depositIdx!], undefined, {
     blockNumberInterval: 1,
@@ -86,13 +88,13 @@ const ClaimContent: React.FC<ClaimContentProps> = ({ token: tokenId, chainId }) 
   }, [deposit, depositIdx, navigate, password, state]);
 
   const doSend = async () => {
-    if (!deposit || !password || depositIdx === undefined) return;
+    if (!address || !deposit || !password || depositIdx === undefined) return;
     setLoading(true);
     try {
+      const provider = getNetworkProvider(chainId);
       const response = await Peanut.sendClaimRequest({
         password,
         depositIdx,
-        network: NETWORK.name,
         recipient: address,
       });
 
