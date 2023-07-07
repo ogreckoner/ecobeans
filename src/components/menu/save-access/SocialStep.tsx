@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button, Col, Row, Space } from "antd";
-import { GoogleOutlined, TwitterOutlined } from "@ant-design/icons";
+import { TwitterOutlined } from "@ant-design/icons";
 
 import { AuthMethod } from "@constants/web3auth";
 import { useWeb3Auth } from "@hooks/useWeb3Auth";
@@ -44,15 +44,6 @@ export const SocialStep: React.FC<SocialStepProps> = ({ onPrevious, onNext, reco
               loading={loading === AuthMethod.TWITTER}
               onClick={() => login(AuthMethod.TWITTER)}
               icon={<TwitterOutlined style={{ fontSize: 24 }} />}
-            />
-            <Button
-              size="large"
-              shape="circle"
-              type="primary"
-              disabled={loading !== undefined}
-              loading={loading === AuthMethod.GOOGLE}
-              onClick={() => login(AuthMethod.GOOGLE)}
-              icon={<GoogleOutlined style={{ fontSize: 24 }} />}
             />
           </Space>
         </Col>
