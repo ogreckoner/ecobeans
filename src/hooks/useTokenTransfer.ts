@@ -8,7 +8,7 @@ import { getClient, getSimpleAccount, useStackup } from "@contexts/StackupContex
 export const useTokenTransfer = (tokenId: Token, network: Network = "optimism") => {
   const { signer } = useStackup();
 
-  const transfer = async (to: string, amount: ethers.BigNumber, fee: ethers.BigNumber): Promise<string> => {
+  const transfer = async (to: string, amount: ethers.BigNumber, fee: ethers.BigNumber) => {
     const token = getTokenInfo(tokenId, network);
     const provider = getNetworkProvider(network);
 
@@ -26,9 +26,7 @@ export const useTokenTransfer = (tokenId: Token, network: Network = "optimism") 
       simpleAccount.executeBatch([erc20.address, erc20.address], [transferData, feeData]);
     }
 
-    const res = await client.sendUserOperation(simpleAccount);
-    const data = await res.wait();
-    return data!.transactionHash;
+    return client.sendUserOperation(simpleAccount);
   };
 
   return { transfer };
