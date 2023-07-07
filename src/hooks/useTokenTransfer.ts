@@ -1,15 +1,15 @@
 import { ethers } from "ethers";
 
 import { ERC20__factory } from "@assets/contracts";
-import { getTokenInfo, Network, Token } from "@constants";
+import { FLAT_FEE_RECIPIENT, getTokenInfo, Network, Token } from "@constants";
 import { getNetworkProvider } from "@modules/blockchain/providers";
-import { FLAT_FEE_RECIPIENT, getClient, getSimpleAccount, useStackup } from "@contexts/StackupContext";
+import { getClient, getSimpleAccount, useStackup } from "@contexts/StackupContext";
 
 export const useTokenTransfer = (tokenId: Token, network: Network = "optimism") => {
   const { signer } = useStackup();
 
-  const transfer = async (to: string, amount: ethers.BigNumber, fee: ethers.BigNumber): Promise<string> => {
-    const token = getTokenInfo(tokenId);
+  const transfer = async (to: string, amount: ethers.BigNumber, fee: ethers.BigNumber) => {
+    const token = getTokenInfo(tokenId, network);
     const provider = getNetworkProvider(network);
 
     const client = await getClient(network);
@@ -20,11 +20,13 @@ export const useTokenTransfer = (tokenId: Token, network: Network = "optimism") 
     const transferData = erc20.interface.encodeFunctionData("transfer", [to, amount]);
     const feeData = erc20.interface.encodeFunctionData("transfer", [FLAT_FEE_RECIPIENT, fee]);
 
-    simpleAccount.executeBatch([erc20.address, erc20.address], [transferData, feeData]);
+    if (fee.isZero()) {
+      simpleAccount.execute(erc20.address, 0, transferData);
+    } else {
+      simpleAccount.executeBatch([erc20.address, erc20.address], [transferData, feeData]);
+    }
 
-    const res = await client.sendUserOperation(simpleAccount);
-    const data = await res.wait();
-    return data!.transactionHash;
+    return client.sendUserOperation(simpleAccount);
   };
 
   return { transfer };

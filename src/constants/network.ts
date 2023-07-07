@@ -8,6 +8,7 @@ export const IS_BASE_ENABLED = process.env.REACT_APP_IS_BASE_ENABLED
   : true;
 
 export interface INetwork {
+  id: AllNetwork;
   name: string;
   color: string;
   rpcUrl: string;
@@ -17,6 +18,7 @@ export interface INetwork {
 
 export const NETWORKS: Record<AllNetwork, INetwork> = {
   mainnet: {
+    id: "mainnet",
     name: "mainnet",
     color: "#ff8b9e",
     chainId: 1,
@@ -24,28 +26,32 @@ export const NETWORKS: Record<AllNetwork, INetwork> = {
     blockExplorer: "https://etherscan.io/",
   },
   optimism: {
-    name: "optimism",
+    id: "goerli-optimism",
+    name: "Optimism",
     color: "#f01a37",
     chainId: 10,
     blockExplorer: "https://optimistic.etherscan.io/",
     rpcUrl: `https://optimism-mainnet.infura.io/v3/${INFURA_ID}`,
   },
   "goerli-optimism": {
-    name: "goerli-optimism",
+    id: "goerli-optimism",
+    name: "Goerli Optimism",
     color: "#0975F6",
     chainId: 420,
     blockExplorer: "https://goerli-optimism.etherscan.io/",
     rpcUrl: `https://endpoints.omniatech.io/v1/op/goerli/public`,
   },
   base: {
-    name: "base",
+    id: "base",
+    name: "Base",
     color: "#f01a37",
     chainId: 8453,
-    blockExplorer: "https://goerli.basescan.org//",
+    blockExplorer: "https://goerli.basescan.org/",
     rpcUrl: `https://goerli.base.org`,
   },
   "base-goerli": {
-    name: "base-goerli",
+    id: "base-goerli",
+    name: "Goerli Base",
     color: "#f01a37",
     chainId: 84531,
     blockExplorer: "https://goerli.basescan.org//",
@@ -65,7 +71,7 @@ if (NETWORK === undefined) {
 
 export function getNetwork(network?: Network) {
   if (network === "base") {
-    return NETWORK.name.includes("goerli") ? NETWORKS["base-goerli"] : NETWORKS.base;
+    return NETWORK.id.includes("goerli") ? NETWORKS["base-goerli"] : NETWORKS.base;
   }
   return NETWORK;
 }

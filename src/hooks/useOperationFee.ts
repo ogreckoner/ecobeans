@@ -4,14 +4,12 @@ import { useQuery } from "react-query";
 import { round } from "@helpers";
 import { parseUnits } from "@helpers/token";
 import { getTokenPrice } from "@helpers/market";
-import { getTokenInfo, Token } from "@constants";
+import { FLAT_FEE_AMOUNT, getTokenInfo, Token } from "@constants";
 
 export enum FeeOperation {
   Transfer,
   Share,
 }
-
-export const FLAT_FEE_AMOUNT = ethers.utils.parseEther(process.env.REACT_APP_FLAT_FEE_AMOUNT!);
 
 async function getOperationFee(token: Token, operation: FeeOperation): Promise<BigNumber> {
   if (token === Token.ECO) return FLAT_FEE_AMOUNT;
