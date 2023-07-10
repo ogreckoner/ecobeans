@@ -1,7 +1,8 @@
 import { ethers } from "ethers";
 
+import { useFlatFees } from "@hooks/useFlatFees";
 import { ERC20__factory } from "@assets/contracts";
-import { FLAT_FEE_RECIPIENT, getTokenInfo, Network, Token } from "@constants";
+import { getTokenInfo, Network, Token } from "@constants";
 import { getClient, getSimpleAccount, useStackup } from "@contexts/StackupContext";
 
 import * as Peanut from "@modules/peanut";
@@ -9,6 +10,7 @@ import { PEANUT_V3_ADDRESS } from "@modules/peanut/constants";
 import { getNetworkProvider } from "@modules/blockchain/providers";
 
 export const usePeanutDeposit = (network: Network = "optimism") => {
+  const { recipient } = useFlatFees();
   const { address, signer } = useStackup();
 
   const deposit = async (tokenId: Token, password: string, amount: ethers.BigNumber, fee: ethers.BigNumber) => {
@@ -21,7 +23,7 @@ export const usePeanutDeposit = (network: Network = "optimism") => {
     const erc20 = ERC20__factory.connect(token.address, provider);
     const peanutAllowance = await erc20.allowance(address, PEANUT_V3_ADDRESS);
 
-    const feeData = erc20.interface.encodeFunctionData("transfer", [FLAT_FEE_RECIPIENT, fee]);
+    const feeData = erc20.interface.encodeFunctionData("transfer", [recipient!, fee]);
     const feeTx = { to: token.address, data: feeData };
 
     const txs = [];

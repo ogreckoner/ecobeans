@@ -26,6 +26,14 @@
 // import { POOL_FACTORY_ADDRESS, QUOTER_V2_ADDRESS, SWAP_ROUTER_ADDRESS } from "@constants/uniswap";
 // import { ERC20__factory, Multicall3__factory, UniswapPoolV3__factory } from "@assets/contracts";
 //
+// export interface ExecutionResult {
+//   paid: ethers.BigNumber;
+//   preOpGas: ethers.BigNumber;
+//   targetResult: string;
+//   targetSuccess: boolean;
+//   validAfter: number;
+//   validUntil: number;
+// }
 // const USDC_TOKEN = new Token(NETWORK.chainId, USDC_TOKEN_ADDRESS, 6, "USDC", "USD Coin");
 // const ECO_TOKEN = new Token(NETWORK.chainId, ECO_TOKEN_ADDRESS, 18, "ECO", "ECO");
 //
