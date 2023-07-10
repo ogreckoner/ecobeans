@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { BigNumber, ethers } from "ethers";
+import { Client, IUserOperation } from "userop";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ScanOutlined, SendOutlined } from "@ant-design/icons";
 import { Alert, Button, FloatButton, Input, InputProps, Space, Spin, Typography } from "antd";
@@ -15,8 +16,10 @@ import { TokenIcon } from "@components/token";
 import { TokenFee } from "@components/commons/TokenFee";
 import { AddressInput } from "@components/AddressInput";
 import { useCurrentToken } from "@components/home/context/TokenContext";
-import { getNetwork, getTokenInfo, IS_BASE_ENABLED, NETWORK, Network, NETWORKS } from "@constants";
+
+import { useStackup } from "@contexts/StackupContext";
 import { useTokenTransfer } from "@hooks/useTokenTransfer";
+import { getNetwork, getTokenInfo, IS_BASE_ENABLED, NETWORK, Network, NETWORKS } from "@constants";
 
 function getTotal(amount: string, decimals: number) {
   try {
@@ -98,6 +101,7 @@ const Circle: React.FC<CircleProps> = ({ type = "warning" }) => {
 };
 
 export const Transfer: React.FC = () => {
+  const { address } = useStackup();
   const { token: tokenId, balance, optimismBalance, baseBalance } = useCurrentToken();
 
   const navigate = useNavigate();
@@ -159,14 +163,20 @@ export const Transfer: React.FC = () => {
       const transferAmounts = calculateTransferAmounts(value, fee, balances);
 
       const update = () => {
-        const hasAnError = networkTransfers.some(network => network.state === "error");
+        const errorsCount = networkTransfers.filter(network => network.state === "error").length;
+        const state = errorsCount === 0 ? "success" : errorsCount === networkTransfers.length ? "error" : "partial";
         const transferred = networkTransfers
           .filter(network => network.state !== "error")
           .reduce((acc, network) => acc.add(network.amount), ethers.constants.Zero);
 
         alertApi.show({
-          type: hasAnError ? "warning" : "success",
-          message: hasAnError ? "Partial Transfer Executed" : "Transfer Executed!",
+          type: state === "success" ? "success" : state === "error" ? "error" : "warning",
+          message:
+            state === "success"
+              ? "Transfer Executed!"
+              : state === "error"
+              ? "Transfer failed"
+              : "Partial Transfer Executed",
           description: (
             <>
               You have sent{" "}
@@ -199,43 +209,82 @@ export const Transfer: React.FC = () => {
         });
       };
 
-      networkTransfers.forEach((network, index) => {
-        const { amount, fee } = transferAmounts[index];
-        network.amount = amount;
-        network.fee = fee;
-        if (!amount.isZero()) {
-          const request = network.transfer(toAddress, amount, fee);
-          request
-            .then(response => {
-              network.userOpHash = response.userOpHash;
-              update();
-              return response.wait();
-            })
-            .then(result => {
-              if (result) {
-                network.state = "success";
-                network.txHash = result.transactionHash;
-              } else {
-                console.error(`[${network.network}-transfer] transaction hash is null`, network, result);
-                network.state = "error";
-              }
-              update();
-            })
-            .catch(err => {
-              console.error(`[${network.network}-transfer]`, err);
-              network.state = "error";
-              update();
-            });
-        } else {
-          network.state = "success";
+      const isSuperSend = transferAmounts.filter(transfer => !transfer.amount.isZero()).length > 1;
+
+      if (isSuperSend) {
+        (async () => {
+          const [optimism, base] = networkTransfers;
+          const [optimismAmounts, baseAmounts] = transferAmounts;
+
+          optimism.fee = optimismAmounts.fee;
+          optimism.amount = optimismAmounts.amount;
+
+          base.fee = baseAmounts.fee;
+          base.amount = baseAmounts.amount;
+
+          try {
+            const userOpWithFee = (await optimism.transfer(toAddress, optimism.amount, optimism.fee, {
+              dryRun: true,
+            })) as IUserOperation;
+            const request = (await base.transfer(toAddress, base.amount, base.fee, {
+              userOpWithFee,
+              onUserOpWithFeeTx: txHash => {
+                optimism.state = "success";
+                optimism.txHash = txHash;
+                update();
+              },
+            })) as Awaited<ReturnType<Client["sendUserOperation"]>>;
+
+            const userOpTx = await request.wait();
+
+            base.state = "success";
+            base.txHash = userOpTx!.transactionHash;
+          } catch (error) {
+            console.error("super-send error", error);
+            optimism.state = "error";
+            base.state = "error";
+          }
           update();
-        }
-      });
+        })();
+      } else {
+        networkTransfers.forEach((network, index) => {
+          const { amount, fee } = transferAmounts[index];
+          network.amount = amount;
+          network.fee = fee;
+          if (!amount.isZero()) {
+            const request = network.transfer(toAddress, amount, fee) as ReturnType<Client["sendUserOperation"]>;
+            request
+              .then(response => {
+                network.userOpHash = response.userOpHash;
+                update();
+                return response.wait();
+              })
+              .then(result => {
+                if (result) {
+                  network.state = "success";
+                  network.txHash = result.transactionHash;
+                } else {
+                  console.error(`[${network.network}-transfer] transaction hash is null`, network, result);
+                  network.state = "error";
+                }
+                update();
+              })
+              .catch(err => {
+                console.error(`[${network.network}-transfer]`, err);
+                network.state = "error";
+                update();
+              });
+          } else {
+            network.state = "success";
+            update();
+          }
+        });
+      }
 
       update();
       setAmount("");
     } catch (e) {
-      console.log("[gasless:transfer]", e);
+      console.error("[gasless:transfer]", e);
       alertApi.error({
         message: "Transfer failed",
       });
@@ -249,12 +298,13 @@ export const Transfer: React.FC = () => {
   };
 
   const setMaxAmount = () => {
-    if (balance && fee) setAmount(ethers.utils.formatUnits(balance.sub(fee)));
+    if (balance && fee && balance.gt(fee)) setAmount(ethers.utils.formatUnits(balance.sub(fee)));
   };
 
   const total = getTotal(amount, token.decimals);
   const exceedsBalance = total.add(fee || ethers.constants.Zero).gt(balance || ethers.constants.Zero);
-  const disabled = exceedsBalance || loading || !amount || !toAddress;
+  const isSelfTransfer = toAddress.trim().toLowerCase() === address?.toLowerCase();
+  const disabled = exceedsBalance || isSelfTransfer || loading || !amount || !toAddress;
 
   return (
     <>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ethers } from "ethers";
-import { Client, Presets, UserOperationMiddlewareFn } from "userop";
+import { Client, IUserOperation, Presets, UserOperationMiddlewareFn } from "userop";
 
 import {
   Network,
@@ -9,6 +9,7 @@ import {
   STACKUP_BASE_RPC_URL,
   STACKUP_OPTIMISM_RPC_URL,
 } from "@constants";
+import { OpToJSON } from "userop/dist/utils";
 
 interface IStackupProvider {
   address?: string;
@@ -28,16 +29,43 @@ function getStackupRpcUrl(network: Network) {
   return network === "base" ? STACKUP_BASE_RPC_URL : STACKUP_OPTIMISM_RPC_URL;
 }
 
-function getPaymaster(network: Network) {
-  const url = network === "base" ? PAYMASTER_URL_BASE : PAYMASTER_URL_OPTIMISM;
+function getStackupPaymasterUrl(network: Network) {
+  return network === "base" ? PAYMASTER_URL_BASE : PAYMASTER_URL_OPTIMISM;
+}
+
+export function getFlatPaymaster(network: Network) {
+  const url = getStackupPaymasterUrl(network);
   return Presets.Middleware.verifyingPaymaster(url, { type: "flat" });
 }
 
-export const getSimpleAccount = (
-  signer: ethers.Signer,
+export function getFreePaymaster(
   network: Network,
-  paymaster: UserOperationMiddlewareFn = getPaymaster(network),
-) => {
+  userOpWithFee: IUserOperation,
+  onUserOpFee: (userOpTx: string) => void,
+): UserOperationMiddlewareFn {
+  const paymasterRpc = getStackupPaymasterUrl(network);
+  const context = { type: "free", userOpWithFee };
+
+  return async ctx => {
+    ctx.op.verificationGasLimit = ethers.BigNumber.from(ctx.op.verificationGasLimit).mul(3);
+
+    const provider = new ethers.providers.JsonRpcProvider(paymasterRpc);
+    const pm = await provider.send("pm_sponsorUserOperation", [OpToJSON(ctx.op), ctx.entryPoint, context]);
+
+    ctx.op.paymasterAndData = pm.paymasterAndData;
+    ctx.op.preVerificationGas = pm.preVerificationGas;
+    ctx.op.verificationGasLimit = pm.verificationGasLimit;
+    ctx.op.callGasLimit = pm.callGasLimit;
+
+    try {
+      onUserOpFee(pm.userOpWithFee.transaction.hash);
+    } catch (e) {
+      console.error("getFreePaymaster - onUserOpFee: ", e);
+    }
+  };
+}
+
+export const getSimpleAccount = (signer: ethers.Signer, network: Network, paymaster?: UserOperationMiddlewareFn) => {
   return Presets.Builder.SimpleAccount.init(signer, getStackupRpcUrl(network), { paymasterMiddleware: paymaster });
 };
 
